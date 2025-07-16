@@ -1,0 +1,192 @@
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageSquare, ListChecks, User } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import ChatInput from "@/components/ChatInput";
+import { useChatMessages } from "@/hooks/useChatMessages";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Task {
+  id: string;
+  name: string;
+  status: string;
+  assignedToName: string;
+  title: string;
+  description: string;
+  priority: "Low" | "Medium" | "High";
+}
+
+const TasksPage: React.FC = () => {
+  const { projectId, milestoneId } = useParams();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [openChat, setOpenChat] = useState(false);
+  const [chatTarget, setChatTarget] = useState<"admin-client" | "admin-designer" | null>(null);
+  const { user, userRole } = useAuth();
+  const messages = useChatMessages(projectId!, milestoneId!, selectedTask?.id, chatTarget);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!projectId || !milestoneId) return;
+
+      const tasksRef = collection(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId,
+        "tasks"
+      );
+
+      const snapshot = await getDocs(tasksRef);
+      const taskList: Task[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Task),
+      }));
+
+      setTasks(taskList);
+    };
+
+    fetchTasks();
+  }, [projectId, milestoneId]);
+
+  const handleOpenChat = (task: Task, target: "admin-client" | "admin-designer") => {
+    setSelectedTask(task);
+    setChatTarget(target);
+    setOpenChat(true);
+  };
+
+  return (
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
+        <p className="text-gray-600 mt-1">All tasks in this milestone</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {tasks.map((task) => (
+          <Card key={task.id} className="hover:shadow transition-shadow">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-2xl">{task.title}</CardTitle>
+                <span
+                  className={`ml-4 px-2 py-1 text-xs font-semibold rounded-full ${
+                    task.priority === "High"
+                      ? "bg-red-100 text-red-800"
+                      : task.priority === "Medium"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  {task.priority?.toLowerCase() ?? "LOW"}
+                </span>
+              </div>
+              <p className="text-md text-gray-500 mt-1">{task.description}</p>
+            </CardHeader>
+
+            <CardContent className="space-y-3 text-sm text-gray-700">
+              <div className="flex items-center gap-2">
+                <ListChecks className="w-4 h-4" />
+                <span>Status: {task.status}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>Designer: {task.assignedToName}</span>
+              </div>
+              <div className="flex gap-2">
+                {(userRole === "admin" || userRole === "client") && (
+                  <button
+                    onClick={() => handleOpenChat(task, "admin-client")}
+                    className="mt-3 inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded hover:bg-gray-800"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Admin Chat
+                  </button>
+                )}
+                {(userRole === "admin" || userRole === "designer") && (
+                  <button
+                    onClick={() => handleOpenChat(task, "admin-designer")}
+                    className="mt-3 inline-flex items-center gap-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Designer Chat
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Sheet open={openChat} onOpenChange={setOpenChat}>
+        <SheetContent side="right" className="w-full max-w-md p-6">
+          <SheetHeader>
+            <SheetTitle>{selectedTask?.title || "Task Chat"}</SheetTitle>
+          </SheetHeader>
+
+          {selectedTask && chatTarget && (
+            <div className="mt-4 flex flex-col gap-4 h-full">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
+                {messages.map((msg) => {
+                  const date = msg.timestamp?.toDate?.();
+                  const time = date
+                    ? new Intl.DateTimeFormat("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true,
+                      }).format(date)
+                    : "";
+
+                  const isOwnMessage = msg.sender === user?.displayName;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${
+                        isOwnMessage ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <span className="text-xs italic text-gray-600 mb-1">
+                        {msg.role}
+                      </span>
+
+                      <div
+                        className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
+                          isOwnMessage
+                            ? "bg-blue-100 text-right ml-auto"
+                            : "bg-white text-left"
+                        }`}
+                      >
+                        <div className="font-semibold text-gray-800 mb-1">
+                          {msg.sender}
+                        </div>
+                        <div className="text-black whitespace-pre-wrap">
+                          {msg.content}
+                        </div>
+                        {time && (
+                          <div className="text-[11px] text-gray-500 mt-2">
+                            {time}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <ChatInput
+                projectId={projectId!}
+                milestoneId={milestoneId!}
+                taskId={selectedTask.id}
+                chatTarget={chatTarget}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+export default TasksPage;

@@ -24,11 +24,6 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
-				'calc-display': 'hsl(var(--calc-display))',
-				'calc-number': 'hsl(var(--calc-number))',
-				'calc-operator': 'hsl(var(--calc-operator))',
-				'calc-equals': 'hsl(var(--calc-equals))',
-				'calc-clear': 'hsl(var(--calc-clear))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'

@@ -1,17 +1,21 @@
-import Calculator from '@/components/Calculator';
+
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="text-center space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2 text-foreground">Calculator</h1>
-          <p className="text-lg text-muted-foreground">A modern calculator application</p>
-        </div>
-        <Calculator />
-      </div>
-    </div>
-  );
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // User is authenticated, redirect to appropriate dashboard
+  return <Navigate to="/" replace />;
 };
 
 export default Index;
