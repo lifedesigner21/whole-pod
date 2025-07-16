@@ -210,7 +210,9 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
           />
 
-          <label className="text-sm font-medium">Estimated Time (in minutes)</label>
+          <label className="text-sm font-medium">
+            Estimated Time (in minutes)
+          </label>
           <Input
             type="number"
             min="1"
@@ -263,9 +265,13 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="To Do">To Do</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Info Required">Info Required</SelectItem>
-              <SelectItem value="Review">Review</SelectItem>
+              {userRole !== "admin" && (
+                <>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="Info Required">Info Required</SelectItem>
+                  <SelectItem value="Review">Review</SelectItem>
+                </>
+              )}
               <SelectItem value="Completed">Completed</SelectItem>
             </SelectContent>
           </Select>
