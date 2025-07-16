@@ -51,6 +51,7 @@ interface Task {
   isRevision?: boolean;
   revisionReasons?: string[];
   estimatedMinutes?: number;
+  completedProof?: string;
 }
 
 interface FilteredTaskListProps {
@@ -60,7 +61,13 @@ interface FilteredTaskListProps {
   onStatusChange: (taskId: string, newStatus: string) => void;
 }
 
-const statusOptions = ["To Do", "In Progress", "Info Required", "In Review", "Completed"];
+const statusOptions = [
+  "To Do",
+  "In Progress",
+  "Info Required",
+  "In Review",
+  "Completed",
+];
 
 const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   tasks,
@@ -77,6 +84,10 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     null
   );
   const [holdReason, setHoldReason] = useState<string>("");
+  const [showCompleteDialogFor, setShowCompleteDialogFor] = useState<
+    string | null
+  >(null);
+  const [proofUrl, setProofUrl] = useState<string>("");
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
     {}
   );
@@ -91,40 +102,67 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   );
 
   const newTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed") return false;
+    if (!task.createdAt || task.isRevision || task.status === "Completed")
+      return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate === today;
   });
 
   const pendingTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed") return false;
+    if (!task.createdAt || task.isRevision || task.status === "Completed")
+      return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate < today;
   });
 
   useEffect(() => {
+    console.log("🔄 INIT: Initializing timers from tasks");
     const initialTimers: Record<string, number> = {};
     tasks.forEach((task) => {
       if (task.actualMinutes && task.actualMinutes > 0) {
         initialTimers[task.id] = task.actualMinutes * 60;
+        console.log(
+          `🔄 INIT: Task ${task.id} (${task.title}) has ${
+            task.actualMinutes
+          } minutes (${task.actualMinutes * 60} seconds)`
+        );
       }
     });
+    console.log("🔄 INIT: Initial timers:", initialTimers);
     setTimers(initialTimers);
   }, [tasks]);
 
   useEffect(() => {
+    console.log("🔄 TIMER: Timer effect running");
     const interval = setInterval(() => {
       setTimers((prev) => {
         const updated = { ...prev };
+        let hasRunningTimer = false;
+
         for (const taskId in runningTimers) {
           if (runningTimers[taskId]) {
             updated[taskId] = (updated[taskId] || 0) + 1;
+            hasRunningTimer = true;
+
+            // Log every 10 seconds to avoid spam
+            if (updated[taskId] % 10 === 0) {
+              console.log(
+                `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
+                  updated[taskId] / 60
+                )}:${String(updated[taskId] % 60).padStart(2, "0")}`
+              );
+            }
           }
         }
+
         return updated;
       });
     }, 1000);
-    return () => clearInterval(interval);
+
+    return () => {
+      console.log("🔄 TIMER: Timer cleanup");
+      clearInterval(interval);
+    };
   }, [runningTimers]);
 
   const handleStart = (taskId: string) => {
@@ -136,54 +174,172 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   };
 
   const confirmHold = async () => {
-    if (!showHoldDialogFor || !holdReason.trim()) return;
-    setRunningTimers((prev) => ({ ...prev, [showHoldDialogFor]: false }));
-    const task = tasks.find((t) => t.id === showHoldDialogFor);
-    if (!task) return;
-    const taskRef = doc(
-      db,
-      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-    );
-    await updateDoc(taskRef, { onHoldReason: holdReason.trim() });
-    setHoldReason("");
-    setShowHoldDialogFor(null);
-  };
+    console.log("🔄 HOLD: Starting confirmHold process");
+    console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
+    console.log("🔄 HOLD: holdReason:", holdReason);
 
-  const handleComplete = async (task: Task) => {
-    setRunningTimers((prev) => ({ ...prev, [task.id]: false }));
-    const totalSeconds = timers[task.id] || 0;
+    if (!showHoldDialogFor || !holdReason.trim()) {
+      console.log(
+        "❌ HOLD: Missing required data - showHoldDialogFor or holdReason"
+      );
+      return;
+    }
+
+    setRunningTimers((prev) => ({ ...prev, [showHoldDialogFor]: false }));
+    console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
+
+    const task = tasks.find((t) => t.id === showHoldDialogFor);
+    if (!task) {
+      console.log("❌ HOLD: Task not found with ID:", showHoldDialogFor);
+      return;
+    }
+
+    console.log("🔄 HOLD: Found task:", task.title);
+
+    const totalSeconds = timers[showHoldDialogFor] || 0;
     const totalMinutes = Math.floor(totalSeconds / 60);
 
+    console.log("🔄 HOLD: Time calculation:");
+    console.log("  - Total seconds:", totalSeconds);
+    console.log("  - Total minutes:", totalMinutes);
+    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+
     const taskRef = doc(
       db,
       `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
     );
 
-    await updateDoc(taskRef, {
+    const updateData = {
+      onHoldReason: holdReason.trim(),
+      actualMinutes: totalMinutes,
+    };
+
+    console.log("🔄 HOLD: Updating database with:", updateData);
+    console.log(
+      "🔄 HOLD: Database path:",
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, updateData);
+      console.log("✅ HOLD: Database updated successfully");
+    } catch (error) {
+      console.error("❌ HOLD: Database update failed:", error);
+    }
+
+    setHoldReason("");
+    setShowHoldDialogFor(null);
+    console.log("🔄 HOLD: Process completed, dialog closed");
+  };
+
+  const handleComplete = (taskId: string) => {
+    setShowCompleteDialogFor(taskId);
+  };
+
+  const confirmComplete = async () => {
+    console.log("🎯 COMPLETE: Starting confirmComplete process");
+    console.log("🎯 COMPLETE: showCompleteDialogFor:", showCompleteDialogFor);
+    console.log("🎯 COMPLETE: proofUrl:", proofUrl);
+
+    if (!showCompleteDialogFor || !proofUrl.trim()) {
+      console.log(
+        "❌ COMPLETE: Missing required data - showCompleteDialogFor or proofUrl"
+      );
+      return;
+    }
+
+    setRunningTimers((prev) => ({ ...prev, [showCompleteDialogFor]: false }));
+    console.log("🎯 COMPLETE: Timer stopped for task:", showCompleteDialogFor);
+
+    const task = tasks.find((t) => t.id === showCompleteDialogFor);
+    if (!task) {
+      console.log(
+        "❌ COMPLETE: Task not found with ID:",
+        showCompleteDialogFor
+      );
+      return;
+    }
+
+    console.log("🎯 COMPLETE: Found task:", task.title);
+
+    const totalSeconds = timers[showCompleteDialogFor] || 0;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+
+    console.log("🎯 COMPLETE: Time calculation:");
+    console.log("  - Total seconds:", totalSeconds);
+    console.log("  - Total minutes:", totalMinutes);
+    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    const updateData = {
       actualMinutes: totalMinutes,
       status: "Completed",
-    });
+      completedProof: proofUrl.trim(),
+    };
 
-    const tasksSnapshot = await getDocs(
-      collection(
+    console.log("🎯 COMPLETE: Updating task with:", updateData);
+    console.log(
+      "🎯 COMPLETE: Database path:",
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, updateData);
+      console.log("✅ COMPLETE: Task updated successfully");
+    } catch (error) {
+      console.error("❌ COMPLETE: Task update failed:", error);
+    }
+
+    console.log(
+      "🎯 COMPLETE: Fetching tasks for milestone progress calculation..."
+    );
+
+    try {
+      const tasksSnapshot = await getDocs(
+        collection(
+          db,
+          `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
+        )
+      );
+
+      const totalTasks = tasksSnapshot.size;
+      const completedTasks = tasksSnapshot.docs.filter(
+        (doc) => doc.data().status === "Completed"
+      ).length;
+
+      console.log("🎯 COMPLETE: Progress calculation:");
+      console.log("  - Total tasks:", totalTasks);
+      console.log("  - Completed tasks:", completedTasks);
+
+      const progress =
+        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      console.log("  - Calculated progress:", progress + "%");
+
+      const milestoneRef = doc(
         db,
-        `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
-      )
-    );
+        `projects/${task.projectId}/milestones/${task.milestoneId}`
+      );
 
-    const totalTasks = tasksSnapshot.size;
-    const completedTasks = tasksSnapshot.docs.filter(
-      (doc) => doc.data().status === "Completed"
-    ).length;
+      console.log("🎯 COMPLETE: Updating milestone progress...");
+      console.log(
+        "🎯 COMPLETE: Milestone path:",
+        `projects/${task.projectId}/milestones/${task.milestoneId}`
+      );
 
-    const progress =
-      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      await updateDoc(milestoneRef, { progress });
+      console.log("✅ COMPLETE: Milestone progress updated successfully");
+    } catch (error) {
+      console.error("❌ COMPLETE: Milestone update failed:", error);
+    }
 
-    const milestoneRef = doc(
-      db,
-      `projects/${task.projectId}/milestones/${task.milestoneId}`
-    );
-    await updateDoc(milestoneRef, { progress });
+    setProofUrl("");
+    setShowCompleteDialogFor(null);
+    console.log("🎯 COMPLETE: Process completed, dialog closed");
   };
 
   const updateSubtaskStatus = async (
@@ -212,7 +368,11 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     )} min`;
   };
 
-  const renderTasks = (taskList: Task[], title: string, isCompleted: boolean = false) => (
+  const renderTasks = (
+    taskList: Task[],
+    title: string,
+    isCompleted: boolean = false
+  ) => (
     <>
       <h3 className="text-xl font-semibold mb-4">{title}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -230,7 +390,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
             <CardContent>
               <div className="flex justify-between">
                 <div className="space-y-2 text-sm text-gray-700">
-                  <p>{task.description}</p>
+                  <p>Description: {task.description}</p>
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     <span>Assigned to: {task.assignedToName}</span>
@@ -244,38 +404,48 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                     <span>Estimated: {task.estimatedMinutes} Mins</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Status:</span>
-                    <Popover
-                      open={openPopoverId === task.id}
-                      onOpenChange={(open) =>
-                        setOpenPopoverId(open ? task.id : null)
-                      }
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          {task.status}
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-2 w-[150px]">
-                        {statusOptions.map((status) => (
+                    <Clock className="w-4 h-4" />
+                    <span>Time Taken: {task.actualMinutes} Mins</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Status:</span>{" "}
+                    {!isCompleted ? (
+                      <Popover
+                        open={openPopoverId === task.id}
+                        onOpenChange={(open) =>
+                          setOpenPopoverId(open ? task.id : null)
+                        }
+                      >
+                        <PopoverTrigger asChild>
                           <Button
-                            key={status}
-                            variant={
-                              status === task.status ? "default" : "ghost"
-                            }
-                            className="w-full justify-start text-left"
-                            onClick={() => onStatusChange(task.id, status)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
                           >
-                            {status}
+                            {task.status}
+                            <ChevronDown className="w-4 h-4" />
                           </Button>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-2 w-[150px]">
+                          {statusOptions.map((status) => (
+                            <Button
+                              key={status}
+                              variant={
+                                status === task.status ? "default" : "ghost"
+                              }
+                              className="w-full justify-start text-left"
+                              onClick={() => onStatusChange(task.id, status)}
+                            >
+                              {status}
+                            </Button>
+                          ))}
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span className="text-green-600 font-medium">
+                        {task.status}
+                      </span>
+                    )}
                   </div>
                   {task.isRevision && (
                     <div className="flex items-center gap-2">
@@ -290,14 +460,14 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                       </span>
                     </div>
                   )}
-                  {userRole !== "designer" && !isCompleted && (
+                  {/* {userRole !== "designer" && !isCompleted && (
                     <CreateSubtaskDialog
                       projectId={task.projectId}
                       milestoneId={task.milestoneId}
                       taskId={task.id}
                     />
-                  )}
-                  {task.subtasks && task.subtasks.length > 0 && (
+                  )} */}
+                  {/* {task.subtasks && task.subtasks.length > 0 && (
                     <div className="mt-2">
                       <Button
                         variant="ghost"
@@ -383,7 +553,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                         </div>
                       )}
                     </div>
-                  )}
+                  )} */}
                 </div>
                 <div className="flex flex-col items-end gap-2 ml-4">
                   <div
@@ -397,6 +567,18 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                       timers[task.id] || (task.actualMinutes || 0) * 60
                     )}
                   </div>
+
+                  {/* Debug info - remove in production
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-gray-400 text-right">
+                      <div>Timer: {timers[task.id] || 0}s</div>
+                      <div>DB: {task.actualMinutes || 0}min</div>
+                      <div>Running: {runningTimers[task.id] ? 'Yes' : 'No'}</div>
+                      {task.onHoldReason && <div>Hold: {task.onHoldReason.substring(0, 20)}...</div>}
+                      {task.completedProof && <div>Proof: Yes</div>}
+                    </div>
+                  )} */}
+
                   {!isCompleted && (
                     <>
                       {!runningTimers[task.id] ? (
@@ -413,7 +595,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                             Hold
                           </Button>
                           <Button
-                            onClick={() => handleComplete(task)}
+                            onClick={() => handleComplete(task.id)}
                             variant="default"
                             size="sm"
                           >
@@ -422,11 +604,6 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                         </>
                       )}
                     </>
-                  )}
-                  {isCompleted && (
-                    <div className="text-xs text-gray-600 font-medium">
-                      ✓ Completed
-                    </div>
                   )}
                 </div>
               </div>
@@ -446,6 +623,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
       {completedTasks.length > 0 &&
         renderTasks(completedTasks, "✅ Completed Tasks", true)}
 
+      {/* Hold Dialog */}
       <Dialog
         open={!!showHoldDialogFor}
         onOpenChange={() => {
@@ -471,6 +649,37 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
             </Button>
             <Button onClick={confirmHold} disabled={!holdReason.trim()}>
               Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Dialog */}
+      <Dialog
+        open={!!showCompleteDialogFor}
+        onOpenChange={() => {
+          setShowCompleteDialogFor(null);
+          setProofUrl("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Work Proof</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Enter proof URL (e.g., screenshot, document link, etc.)"
+            value={proofUrl}
+            onChange={(e) => setProofUrl(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowCompleteDialogFor(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmComplete} disabled={!proofUrl.trim()}>
+              Complete Task
             </Button>
           </DialogFooter>
         </DialogContent>

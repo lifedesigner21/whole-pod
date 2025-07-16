@@ -11,7 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  Timestamp,
+} from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { CalendarDays } from "lucide-react";
 
@@ -21,7 +28,6 @@ const LeaveRequestDialog = () => {
   const [open, setOpen] = useState(false);
   const [leaveTitle, setLeaveTitle] = useState("");
   const [leaveType, setLeaveType] = useState("medical");
-  const [otherLeaveType, setOtherLeaveType] = useState("");
   const [leaveFrom, setLeaveFrom] = useState("");
   const [leaveTo, setLeaveTo] = useState("");
   const [reason, setReason] = useState("");
@@ -32,7 +38,7 @@ const LeaveRequestDialog = () => {
 
     const payload = {
       title: leaveTitle,
-      leaveType: leaveType === "other" ? otherLeaveType : leaveType,
+      leaveType,
       leaveFrom,
       leaveTo,
       reason,
@@ -66,7 +72,6 @@ const LeaveRequestDialog = () => {
       setOpen(false);
       setLeaveTitle("");
       setLeaveType("medical");
-      setOtherLeaveType("");
       setLeaveFrom("");
       setLeaveTo("");
       setReason("");
@@ -101,6 +106,7 @@ const LeaveRequestDialog = () => {
               value={leaveTitle}
               onChange={(e) => setLeaveTitle(e.target.value)}
               placeholder="Leave for medical reason"
+              required={true}
             />
           </div>
 
@@ -112,22 +118,15 @@ const LeaveRequestDialog = () => {
                 setLeaveType(e.target.value)
               }
               className="w-full border rounded px-3 py-2 mt-1"
+              required={true}
             >
               <option value="medical">Medical</option>
-              <option value="other">Other</option>
+              <option value="casual">Casual</option>
+              <option value="full-day">Full Day</option>
+              <option value="half-day">Half Day</option>
+              <option value="wfh">Work From Home</option>
             </select>
           </div>
-
-          {leaveType === "other" && (
-            <div>
-              <Label>Specify Leave Type</Label>
-              <Input
-                value={otherLeaveType}
-                onChange={(e) => setOtherLeaveType(e.target.value)}
-                placeholder="e.g., Personal, Emergency"
-              />
-            </div>
-          )}
 
           <div className="flex gap-2">
             <div className="flex-1">
@@ -136,6 +135,7 @@ const LeaveRequestDialog = () => {
                 type="date"
                 value={leaveFrom}
                 onChange={(e) => setLeaveFrom(e.target.value)}
+                required={true}
               />
             </div>
             <div className="flex-1">
@@ -144,6 +144,7 @@ const LeaveRequestDialog = () => {
                 type="date"
                 value={leaveTo}
                 onChange={(e) => setLeaveTo(e.target.value)}
+                required={true}
               />
             </div>
           </div>
@@ -154,6 +155,7 @@ const LeaveRequestDialog = () => {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe your reason for leave"
+              required={true}
             />
           </div>
 
@@ -165,6 +167,7 @@ const LeaveRequestDialog = () => {
                 value={proofUrl}
                 onChange={(e) => setProofUrl(e.target.value)}
                 placeholder="e.g., https://drive.google.com/medical-report"
+                required={leaveType === "medical"}
               />
             </div>
           )}
