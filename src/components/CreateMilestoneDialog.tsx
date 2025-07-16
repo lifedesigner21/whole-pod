@@ -43,6 +43,8 @@ interface UserOption {
 interface CreateMilestoneDialogProps {
   projectId: string;
   projectName: string;
+  clientName: string;
+  clientId: string;
   onMilestoneCreated: () => void;
 }
 
@@ -67,7 +69,7 @@ const defaultForm = {
 const CreateMilestoneDialog = forwardRef<
   CreateMilestoneDialogRef,
   CreateMilestoneDialogProps
->(({ projectId, projectName, onMilestoneCreated }, ref) => {
+>(({ projectId, projectName,clientName,clientId, onMilestoneCreated }, ref) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [isEdit, setIsEdit] = useState(false);
@@ -85,7 +87,11 @@ const CreateMilestoneDialog = forwardRef<
         });
         setIsEdit(true);
       } else {
-        setForm({ ...defaultForm });
+        setForm({
+          ...defaultForm,
+          client: clientName,
+          clientId: clientId,
+        });
         setIsEdit(false);
       }
       setOpen(true);

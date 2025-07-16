@@ -85,6 +85,8 @@ const AdminProjectDetails = () => {
         ref={milestoneRef}
         projectId={project.id}
         projectName={project.name}
+        clientId={project.clientId}
+        clientName={project.clientName}
         onMilestoneCreated={fetchMilestones}
       />
 
