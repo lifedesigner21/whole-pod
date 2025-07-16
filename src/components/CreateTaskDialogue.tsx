@@ -37,6 +37,8 @@ interface CreateTaskDialogProps {
   onTaskCreated?: () => void;
   onTaskUpdated?: () => void;
   taskToEdit?: any; // Pass the task object for editing
+  projectName?: string;
+  milestoneName?: string;
 }
 
 interface DesignerUser {

@@ -7,6 +7,14 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Calendar,
   Clock,
   User,
@@ -18,17 +26,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import ChatInput from "./ChatInput";
+import { doc, updateDoc, getDocs, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface Task {
   id: string;
   title: string;
   description: string;
   dueDate: string;
-  estimatedMinutes: number;
+  estimatedHours: number;
   priority: string;
   status: string;
   assignedToName: string;
+  createdAt: string;
+  projectId: string;
+  milestoneId: string;
+  actualMinutes?: number;
+  onHoldReason?: string;
+  isRevision?: boolean;
+  revisionReasons?: string[];
+  estimatedMinutes?: number;
   completedProof?: string;
+  projectName?: string;
+  milestoneName?: string;
 }
 
 interface TaskListProps {
@@ -64,8 +84,28 @@ const TaskList: React.FC<TaskListProps> = ({
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [openChat, setOpenChat] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [chatTarget, setChatTarget] = useState<"admin-client" | "admin-designer" | null>(null);
-  const messages = useChatMessages(projectId!, milestoneId!, selectedTask?.id, chatTarget);
+  const [chatTarget, setChatTarget] = useState<
+    "admin-client" | "admin-designer" | null
+  >(null);
+  const messages = useChatMessages(
+    projectId!,
+    milestoneId!,
+    selectedTask?.id,
+    chatTarget
+  );
+
+  const [timers, setTimers] = useState<Record<string, number>>({});
+  const [runningTimers, setRunningTimers] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [showHoldDialogFor, setShowHoldDialogFor] = useState<string | null>(
+    null
+  );
+  const [holdReason, setHoldReason] = useState<string>("");
+  const [showCompleteDialogFor, setShowCompleteDialogFor] = useState<
+    string | null
+  >(null);
+  const [proofUrl, setProofUrl] = useState<string>("");
 
   useEffect(() => {
     const assigned =
@@ -74,6 +114,242 @@ const TaskList: React.FC<TaskListProps> = ({
         : tasks;
     setFilteredTasks(assigned);
   }, [tasks, userRole, user]);
+
+  useEffect(() => {
+    console.log("🔄 INIT: Initializing timers from tasks");
+    const initialTimers: Record<string, number> = {};
+    tasks.forEach((task) => {
+      if (task.actualMinutes && task.actualMinutes > 0) {
+        initialTimers[task.id] = task.actualMinutes * 60;
+        console.log(
+          `🔄 INIT: Task ${task.id} (${task.title}) has ${
+            task.actualMinutes
+          } minutes (${task.actualMinutes * 60} seconds)`
+        );
+      }
+    });
+    console.log("🔄 INIT: Initial timers:", initialTimers);
+    setTimers(initialTimers);
+  }, [tasks]);
+
+  useEffect(() => {
+    console.log("🔄 TIMER: Timer effect running");
+    const interval = setInterval(() => {
+      setTimers((prev) => {
+        const updated = { ...prev };
+        let hasRunningTimer = false;
+
+        for (const taskId in runningTimers) {
+          if (runningTimers[taskId]) {
+            updated[taskId] = (updated[taskId] || 0) + 1;
+            hasRunningTimer = true;
+
+            // Log every 10 seconds to avoid spam
+            if (updated[taskId] % 10 === 0) {
+              console.log(
+                `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
+                  updated[taskId] / 60
+                )}:${String(updated[taskId] % 60).padStart(2, "0")}`
+              );
+            }
+          }
+        }
+
+        return updated;
+      });
+    }, 1000);
+
+    return () => {
+      console.log("🔄 TIMER: Timer cleanup");
+      clearInterval(interval);
+    };
+  }, [runningTimers]);
+
+  const handleStart = (taskId: string) => {
+    setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+  };
+
+  const handleHold = (taskId: string) => {
+    setShowHoldDialogFor(taskId);
+  };
+
+  const confirmHold = async () => {
+    console.log("🔄 HOLD: Starting confirmHold process");
+    console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
+    console.log("🔄 HOLD: holdReason:", holdReason);
+
+    if (!showHoldDialogFor || !holdReason.trim()) {
+      console.log(
+        "❌ HOLD: Missing required data - showHoldDialogFor or holdReason"
+      );
+      return;
+    }
+
+    setRunningTimers((prev) => ({ ...prev, [showHoldDialogFor]: false }));
+    console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
+
+    const task = tasks.find((t) => t.id === showHoldDialogFor);
+    if (!task) {
+      console.log("❌ HOLD: Task not found with ID:", showHoldDialogFor);
+      return;
+    }
+
+    console.log("🔄 HOLD: Found task:", task.title);
+
+    const totalSeconds = timers[showHoldDialogFor] || 0;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+
+    console.log("🔄 HOLD: Time calculation:");
+    console.log("  - Total seconds:", totalSeconds);
+    console.log("  - Total minutes:", totalMinutes);
+    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    const updateData = {
+      onHoldReason: holdReason.trim(),
+      actualMinutes: totalMinutes,
+    };
+
+    console.log("🔄 HOLD: Updating database with:", updateData);
+    console.log(
+      "🔄 HOLD: Database path:",
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, updateData);
+      console.log("✅ HOLD: Database updated successfully");
+    } catch (error) {
+      console.error("❌ HOLD: Database update failed:", error);
+    }
+
+    setHoldReason("");
+    setShowHoldDialogFor(null);
+    console.log("🔄 HOLD: Process completed, dialog closed");
+  };
+
+  const handleComplete = (taskId: string) => {
+    setShowCompleteDialogFor(taskId);
+  };
+
+  const confirmComplete = async () => {
+    console.log("🎯 COMPLETE: Starting confirmComplete process");
+    console.log("🎯 COMPLETE: showCompleteDialogFor:", showCompleteDialogFor);
+    console.log("🎯 COMPLETE: proofUrl:", proofUrl);
+
+    if (!showCompleteDialogFor || !proofUrl.trim()) {
+      console.log(
+        "❌ COMPLETE: Missing required data - showCompleteDialogFor or proofUrl"
+      );
+      return;
+    }
+
+    setRunningTimers((prev) => ({ ...prev, [showCompleteDialogFor]: false }));
+    console.log("🎯 COMPLETE: Timer stopped for task:", showCompleteDialogFor);
+
+    const task = tasks.find((t) => t.id === showCompleteDialogFor);
+    if (!task) {
+      console.log(
+        "❌ COMPLETE: Task not found with ID:",
+        showCompleteDialogFor
+      );
+      return;
+    }
+
+    console.log("🎯 COMPLETE: Found task:", task.title);
+
+    const totalSeconds = timers[showCompleteDialogFor] || 0;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+
+    console.log("🎯 COMPLETE: Time calculation:");
+    console.log("  - Total seconds:", totalSeconds);
+    console.log("  - Total minutes:", totalMinutes);
+    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    const updateData = {
+      actualMinutes: totalMinutes,
+      status: "Completed",
+      completedProof: proofUrl.trim(),
+    };
+
+    console.log("🎯 COMPLETE: Updating task with:", updateData);
+    console.log(
+      "🎯 COMPLETE: Database path:",
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, updateData);
+      console.log("✅ COMPLETE: Task updated successfully");
+    } catch (error) {
+      console.error("❌ COMPLETE: Task update failed:", error);
+    }
+
+    console.log(
+      "🎯 COMPLETE: Fetching tasks for milestone progress calculation..."
+    );
+
+    try {
+      const tasksSnapshot = await getDocs(
+        collection(
+          db,
+          `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
+        )
+      );
+
+      const totalTasks = tasksSnapshot.size;
+      const completedTasks = tasksSnapshot.docs.filter(
+        (doc) => doc.data().status === "Completed"
+      ).length;
+
+      console.log("🎯 COMPLETE: Progress calculation:");
+      console.log("  - Total tasks:", totalTasks);
+      console.log("  - Completed tasks:", completedTasks);
+
+      const progress =
+        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      console.log("  - Calculated progress:", progress + "%");
+
+      const milestoneRef = doc(
+        db,
+        `projects/${task.projectId}/milestones/${task.milestoneId}`
+      );
+
+      console.log("🎯 COMPLETE: Updating milestone progress...");
+      console.log(
+        "🎯 COMPLETE: Milestone path:",
+        `projects/${task.projectId}/milestones/${task.milestoneId}`
+      );
+
+      await updateDoc(milestoneRef, { progress });
+      console.log("✅ COMPLETE: Milestone progress updated successfully");
+    } catch (error) {
+      console.error("❌ COMPLETE: Milestone update failed:", error);
+    }
+
+    setProofUrl("");
+    setShowCompleteDialogFor(null);
+    console.log("🎯 COMPLETE: Process completed, dialog closed");
+  };
+
+  const formatMinutes = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+      2,
+      "0"
+    )} min`;
+  };
 
   const handleOpenChat = (task: Task) => {
     setSelectedTask(task);
@@ -110,7 +386,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-gray-700">
-                <p>{task.description}</p>
+                <p>Description: {task.description}</p>
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4" />
                   <span>Assigned to: {task.assignedToName}</span>
@@ -124,37 +400,93 @@ const TaskList: React.FC<TaskListProps> = ({
                   <span>Est: {task.estimatedMinutes} mins</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>Time Taken: {task.actualMinutes} Mins</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>
-                  <Popover
-                    open={openPopoverId === task.id}
-                    onOpenChange={(open) =>
-                      setOpenPopoverId(open ? task.id : null)
+                  {task.status === "completed" ? (
+                    <Popover
+                      open={openPopoverId === task.id}
+                      onOpenChange={(open) =>
+                        setOpenPopoverId(open ? task.id : null)
+                      }
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1"
+                        >
+                          {task.status}
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-2 w-[150px]">
+                        {statusOptions.map((status) => (
+                          <Button
+                            key={status}
+                            variant={
+                              status === task.status ? "default" : "ghost"
+                            }
+                            className="w-full justify-start text-left"
+                            onClick={() => onStatusChange(task.id, status)}
+                          >
+                            {status}
+                          </Button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <span className="text-green-600 font-medium">
+                      {task.status}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span
+                    className={
+                      runningTimers[task.id]
+                        ? "text-red-500 font-medium"
+                        : "text-green-600 font-medium"
                     }
                   >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        {task.status}
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-2 w-[150px]">
-                      {statusOptions.map((status) => (
-                        <Button
-                          key={status}
-                          variant={status === task.status ? "default" : "ghost"}
-                          className="w-full justify-start text-left"
-                          onClick={() => onStatusChange(task.id, status)}
-                        >
-                          {status}
-                        </Button>
-                      ))}
-                    </PopoverContent>
-                  </Popover>
+                    {formatMinutes(
+                      timers[task.id] || (task.actualMinutes || 0) * 60
+                    )}
+                  </span>
                 </div>
+
+                <div className="flex gap-2 mt-2">
+                  {task.status !== "Completed" && (
+                    <>
+                      {!runningTimers[task.id] ? (
+                        <Button onClick={() => handleStart(task.id)} size="sm">
+                          Start
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={() => handleHold(task.id)}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            Hold
+                          </Button>
+                          <Button
+                            onClick={() => handleComplete(task.id)}
+                            variant="default"
+                            size="sm"
+                          >
+                            Completed
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {task.completedProof && (
                   <div className="flex items-center gap-2 text-xs text-green-700">
                     <Check className="w-4 h-4" />
@@ -185,92 +517,6 @@ const TaskList: React.FC<TaskListProps> = ({
             </Card>
           ))}
         </div>
-
-        <Sheet open={openChat} onOpenChange={setOpenChat}>
-          <SheetContent side="right" className="w-full max-w-md p-6">
-            <SheetHeader>
-              <SheetTitle>{selectedTask?.title || "Task Chat"}</SheetTitle>
-            </SheetHeader>
-
-            {selectedTask && (
-              <div className="mt-4 flex flex-col gap-4 h-full">
-                {(userRole === "admin") && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant={chatTarget === "admin-client" ? "default" : "outline"}
-                      onClick={() => setChatTarget("admin-client")}
-                    >
-                      Client Chat
-                    </Button>
-                    <Button
-                      variant={chatTarget === "admin-designer" ? "default" : "outline"}
-                      onClick={() => setChatTarget("admin-designer")}
-                    >
-                      Designer Chat
-                    </Button>
-                  </div>
-                )}
-
-                <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
-                  {messages.map((msg) => {
-                    const date = msg.timestamp?.toDate?.();
-                    const time = date
-                      ? new Intl.DateTimeFormat("en-US", {
-                          hour: "numeric",
-                          minute: "numeric",
-                          hour12: true,
-                        }).format(date)
-                      : "";
-
-                    const isOwnMessage = msg.sender === user?.displayName;
-
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${
-                          isOwnMessage ? "items-end" : "items-start"
-                        }`}
-                      >
-                        <span className="text-xs italic text-gray-600 mb-1">
-                          {msg.role}
-                        </span>
-
-                        <div
-                          className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
-                            isOwnMessage
-                              ? "bg-blue-100 text-right ml-auto"
-                              : "bg-white text-left"
-                          }`}
-                        >
-                          <div className="font-semibold text-gray-800 mb-1">
-                            {msg.sender}
-                          </div>
-                          <div className="text-black whitespace-pre-wrap">
-                            {msg.content}
-                          </div>
-                          {time && (
-                            <div className="text-[11px] text-gray-500 mt-2">
-                              {time}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {chatTarget && (
-                  <ChatInput
-                    projectId={projectId!}
-                    milestoneId={milestoneId!}
-                    taskId={selectedTask.id}
-                    chatTarget={chatTarget}
-                  />
-                )}
-              </div>
-            )}
-          </SheetContent>
-        </Sheet>
       </div>
     );
   };
@@ -280,6 +526,158 @@ const TaskList: React.FC<TaskListProps> = ({
       {renderSection("🟡 Pending Tasks", grouped.pending)}
       {renderSection("🟠 In Progress Tasks", grouped.inProgress)}
       {renderSection("✅ Completed Tasks", grouped.completed)}
+
+      <Sheet open={openChat} onOpenChange={setOpenChat}>
+        <SheetContent side="right" className="w-full max-w-md p-6">
+          <SheetHeader>
+            <SheetTitle>{selectedTask?.title || "Task Chat"}</SheetTitle>
+          </SheetHeader>
+
+          {selectedTask && (
+            <div className="mt-4 flex flex-col gap-4 h-full">
+              {userRole === "admin" && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={
+                      chatTarget === "admin-client" ? "default" : "outline"
+                    }
+                    onClick={() => setChatTarget("admin-client")}
+                  >
+                    Client Chat
+                  </Button>
+                  <Button
+                    variant={
+                      chatTarget === "admin-designer" ? "default" : "outline"
+                    }
+                    onClick={() => setChatTarget("admin-designer")}
+                  >
+                    Designer Chat
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
+                {messages.map((msg) => {
+                  const date = msg.timestamp?.toDate?.();
+                  const time = date
+                    ? new Intl.DateTimeFormat("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true,
+                      }).format(date)
+                    : "";
+
+                  const isOwnMessage = msg.sender === user?.displayName;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${
+                        isOwnMessage ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <span className="text-xs italic text-gray-600 mb-1">
+                        {msg.role}
+                      </span>
+
+                      <div
+                        className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
+                          isOwnMessage
+                            ? "bg-blue-100 text-right ml-auto"
+                            : "bg-white text-left"
+                        }`}
+                      >
+                        <div className="font-semibold text-gray-800 mb-1">
+                          {msg.sender}
+                        </div>
+                        <div className="text-black whitespace-pre-wrap">
+                          {msg.content}
+                        </div>
+                        {time && (
+                          <div className="text-[11px] text-gray-500 mt-2">
+                            {time}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {chatTarget && (
+                <ChatInput
+                  projectId={projectId!}
+                  milestoneId={milestoneId!}
+                  taskId={selectedTask.id}
+                  chatTarget={chatTarget}
+                />
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Hold Dialog */}
+      <Dialog
+        open={!!showHoldDialogFor}
+        onOpenChange={() => {
+          setShowHoldDialogFor(null);
+          setHoldReason("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Hold Reason</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Why are you holding this task?"
+            value={holdReason}
+            onChange={(e) => setHoldReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowHoldDialogFor(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmHold} disabled={!holdReason.trim()}>
+              Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Dialog */}
+      <Dialog
+        open={!!showCompleteDialogFor}
+        onOpenChange={() => {
+          setShowCompleteDialogFor(null);
+          setProofUrl("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Work Proof</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Enter proof URL (e.g., screenshot, document link, etc.)"
+            value={proofUrl}
+            onChange={(e) => setProofUrl(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowCompleteDialogFor(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmComplete} disabled={!proofUrl.trim()}>
+              Complete Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

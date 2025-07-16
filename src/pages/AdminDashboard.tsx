@@ -24,12 +24,14 @@ import {
   Calendar,
   MessageCircle,
   CheckCircleIcon,
+  Trash2,
 } from "lucide-react";
 import { Project } from "@/data/mockData";
 import CreateProjectDialog from "@/components/CreateNewProject";
 import {
   collection,
   collectionGroup,
+  deleteDoc,
   doc,
   getDocs,
   onSnapshot,
@@ -137,6 +139,22 @@ const AdminDashboard = () => {
 
   const handleCreateProject = (newProject: any) => {
     setProjects((prev) => [...prev, newProject]);
+  };
+
+  const handleDelete = async (projectId: string) => {
+    try {
+      await deleteDoc(doc(db, "projects", projectId));
+      toast({
+        title: "Success",
+        description: "Project has been deleted successfully.",
+      });
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete project.",
+      });
+    }
   };
 
   const filteredProjects = projects.filter((project) => {
@@ -448,6 +466,15 @@ const AdminDashboard = () => {
                         }}
                       >
                         <Edit className="w-3 h-3" />
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(project.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </div>

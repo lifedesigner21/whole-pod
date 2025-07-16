@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MessageSquare, IndianRupee } from "lucide-react";
+import { Calendar, User, MessageSquare, IndianRupee, Trash2 } from "lucide-react";
 import { Project } from "@/data/mockData";
 import { formatDate } from "@/lib/utils";
 import { doc, getDocs, updateDoc, collection } from "firebase/firestore";
@@ -14,6 +14,7 @@ interface ProjectCardProps {
   onViewDetails: (projectId: string) => void;
   showClientInfo?: boolean;
   showDesignerInfo?: boolean;
+  onDelete?: (projectId: string) => void;
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -21,6 +22,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onViewDetails,
   showClientInfo = true,
   showDesignerInfo = true,
+  onDelete,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,9 +77,20 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           <CardTitle className="text-lg font-semibold text-gray-900">
             {project.name}
           </CardTitle>
-          <Badge className={getStatusColor(project.status)}>
-            {project.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={getStatusColor(project.status)}>
+              {project.status}
+            </Badge>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(project.id)}
+                className="text-muted-foreground hover:text-destructive transition-colors"
+                aria-label="Delete project"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </CardHeader>
 

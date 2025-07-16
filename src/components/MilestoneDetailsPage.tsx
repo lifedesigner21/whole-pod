@@ -27,11 +27,15 @@ interface Task {
   priority: string;
   status: string;
   assignedToName: string;
-  actualMinutes?: number;
+  createdAt: string;
   projectId: string;
   milestoneId: string;
-  subtasks?: Subtask[];
-  estimatedMinutes: number;
+  actualMinutes?: number;
+  onHoldReason?: string;
+  isRevision?: boolean;
+  revisionReasons?: string[];
+  estimatedMinutes?: number;
+  completedProof?: string;
 }
 
 const MilestoneDetailsPage = () => {
@@ -171,6 +175,5 @@ const MilestoneDetailsPage = () => {
     </div>
   );
 };
-
 
 export default MilestoneDetailsPage;

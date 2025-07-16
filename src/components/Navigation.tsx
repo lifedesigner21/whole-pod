@@ -17,6 +17,18 @@ import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import AddUserDialog from "./AddUserDialogue";
 
+interface NotificationItem {
+  id: string;
+  message: string;
+  type: string;
+  read: boolean;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+    toDate?: () => Date; // optional if you're using Firestore Timestamp object
+  };
+}
+
 const Navigation = () => {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
@@ -26,16 +38,30 @@ const Navigation = () => {
   // 🔔 Fetch notifications
   useEffect(() => {
     if (!user?.uid) return;
+
     const unsub = onSnapshot(
       collection(db, `users/${user.uid}/notifications`),
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
+        const data: NotificationItem[] = snapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...(doc.data() as NotificationItem), // 👈 cast properly here
         }));
-        setNotifications(data);
+
+        // Sort unread first, and then by createdAt descending
+        const sorted = data.sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+
+          if (a.read === b.read) {
+            return bTime - aTime; // newer first
+          }
+          return a.read ? 1 : -1; // unread first
+        });
+
+        setNotifications(sorted);
       }
     );
+
     return () => unsub();
   }, [user]);
 
