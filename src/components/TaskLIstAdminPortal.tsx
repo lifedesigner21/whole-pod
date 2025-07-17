@@ -415,14 +415,20 @@ const TaskList: React.FC<TaskListProps> = ({
                     {task.priority}
                   </span>
                 </CardTitle>
-                <div
-                  className="flex items-end justify-end font-bold"
-                  onClick={() =>
-                    handleDeleteTask(task.id, task.projectId, task.milestoneId)
-                  }
-                >
-                  <Trash className="w-4 h-4 text-red-600 cursor-pointer " />
-                </div>
+                {userRole === "admin" && (
+                  <div
+                    className="flex items-end justify-end font-bold"
+                    onClick={() =>
+                      handleDeleteTask(
+                        task.id,
+                        task.projectId,
+                        task.milestoneId
+                      )
+                    }
+                  >
+                    <Trash className="w-4 h-4 text-red-600 cursor-pointer " />
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-gray-700">
                 <p>Description: {task.description}</p>

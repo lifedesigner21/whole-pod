@@ -114,7 +114,11 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">ProjectHub</h1>
+            <img
+              src="/LD_logo.png" 
+              alt="Life Designer Logo"
+              className="h-8"
+            />
             <span
               className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
                 userRole
