@@ -21,12 +21,19 @@ import {
   ChevronDown,
   Check,
   MessageSquare,
+  Trash,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import ChatInput from "./ChatInput";
-import { doc, updateDoc, getDocs, collection } from "firebase/firestore";
+import {
+  doc,
+  updateDoc,
+  getDocs,
+  collection,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Task {
@@ -49,6 +56,7 @@ interface Task {
   completedProof?: string;
   projectName?: string;
   milestoneName?: string;
+  isApproved?: boolean;
 }
 
 interface TaskListProps {
@@ -107,6 +115,9 @@ const TaskList: React.FC<TaskListProps> = ({
   >(null);
   const [proofUrl, setProofUrl] = useState<string>("");
 
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+  const [revisionReason, setRevisionReason] = useState("");
+
   useEffect(() => {
     const assigned =
       userRole === "designer"
@@ -164,7 +175,27 @@ const TaskList: React.FC<TaskListProps> = ({
       clearInterval(interval);
     };
   }, [runningTimers]);
-
+  const handleDeleteTask = async (
+    taskId: string,
+    projectId: string,
+    milestoneId: string
+  ) => {
+    try {
+      const taskRef = doc(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId,
+        "tasks",
+        taskId
+      );
+      await deleteDoc(taskRef);
+      console.log("Task deleted successfully");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
   const handleStart = (taskId: string) => {
     setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
   };
@@ -384,6 +415,14 @@ const TaskList: React.FC<TaskListProps> = ({
                     {task.priority}
                   </span>
                 </CardTitle>
+                <div
+                  className="flex items-end justify-end font-bold"
+                  onClick={() =>
+                    handleDeleteTask(task.id, task.projectId, task.milestoneId)
+                  }
+                >
+                  <Trash className="w-4 h-4 text-red-600 cursor-pointer " />
+                </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-gray-700">
                 <p>Description: {task.description}</p>
@@ -403,9 +442,16 @@ const TaskList: React.FC<TaskListProps> = ({
                   <Clock className="w-4 h-4" />
                   <span>Time Taken: {task.actualMinutes} Mins</span>
                 </div>
+                {/* Show last revision reason if exists */}
+                {task.isRevision && task.revisionReasons?.length > 0 && (
+                  <div className="text-sm text-red-600 mt-2">
+                    <span className="font-semibold">Revision Requested:</span>{" "}
+                    {task.revisionReasons[task.revisionReasons.length - 1]}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>
-                  {task.status === "completed" ? (
+                  {task.status !== "completed" ? (
                     <Popover
                       open={openPopoverId === task.id}
                       onOpenChange={(open) =>
@@ -458,7 +504,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   </span>
                 </div>
 
-                <div className="flex gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2">
                   {task.status !== "Completed" && (
                     <>
                       {!runningTimers[task.id] ? (
@@ -483,6 +529,44 @@ const TaskList: React.FC<TaskListProps> = ({
                           </Button>
                         </>
                       )}
+                    </>
+                  )}
+
+                  {userRole === "admin" && task.status !== "Completed" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const taskRef = doc(
+                            db,
+                            `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+                          );
+                          try {
+                            await updateDoc(taskRef, {
+                              isApproved: true,
+                              isRevision: false,
+                            });
+                            console.log("✅ APPROVED: Task updated");
+                          } catch (err) {
+                            console.error("❌ APPROVED: Failed to update", err);
+                          }
+                        }}
+                        variant="outline"
+                        className="border border-green-500 text-green-500 hover:text-green-600"
+                        disabled={task.isApproved}
+                      >
+                        {task.isApproved ? "Approved" : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setShowRevisionDialog(true);
+                        }}
+                      >
+                        Request Revision
+                      </Button>
                     </>
                   )}
                 </div>
@@ -674,6 +758,59 @@ const TaskList: React.FC<TaskListProps> = ({
             </Button>
             <Button onClick={confirmComplete} disabled={!proofUrl.trim()}>
               Complete Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revision Dialog */}
+      <Dialog open={showRevisionDialog} onOpenChange={setShowRevisionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Revision Reason</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Why is this task sent for revision?"
+            value={revisionReason}
+            onChange={(e) => setRevisionReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setShowRevisionDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!revisionReason.trim() || !selectedTask) return;
+
+                const taskRef = doc(
+                  db,
+                  `projects/${selectedTask.projectId}/milestones/${selectedTask.milestoneId}/tasks/${selectedTask.id}`
+                );
+
+                try {
+                  await updateDoc(taskRef, {
+                    isRevision: true,
+                    isApproved: false,
+                    status: "In Revision",
+                    revisionReasons: [
+                      ...(selectedTask.revisionReasons || []),
+                      revisionReason.trim(),
+                    ],
+                  });
+                  console.log("✅ REVISION: Task updated", revisionReason);
+                } catch (err) {
+                  console.error("❌ REVISION: Failed to update", err);
+                }
+
+                setRevisionReason("");
+                setShowRevisionDialog(false);
+              }}
+              disabled={!revisionReason.trim()}
+            >
+              Submit
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,7 +16,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import CreateSubtaskDialog from "./CreateSubTasiDialog";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -91,6 +91,10 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>(
     {}
   );
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
+  const [milestoneNames, setMilestoneNames] = useState<Record<string, string>>(
+    {}
+  );
 
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -130,6 +134,51 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     });
     console.log("🔄 INIT: Initial timers:", initialTimers);
     setTimers(initialTimers);
+  }, [tasks]);
+
+  useEffect(() => {
+    const fetchNames = async () => {
+      const uniqueProjectIds = Array.from(
+        new Set(tasks.map((task) => task.projectId))
+      );
+      const tempProjectNames: Record<string, string> = {};
+      const tempMilestoneNames: Record<string, string> = {};
+
+      for (const projectId of uniqueProjectIds) {
+        const projectRef = doc(db, "projects", projectId);
+        const projectSnap = await getDoc(projectRef);
+        if (projectSnap.exists()) {
+          tempProjectNames[projectId] =
+            projectSnap.data().name || "Unnamed Project";
+
+          const milestoneIds = Array.from(
+            new Set(
+              tasks
+                .filter((t) => t.projectId === projectId)
+                .map((t) => t.milestoneId)
+            )
+          );
+
+          for (const milestoneId of milestoneIds) {
+            const milestoneRef = doc(
+              db,
+              `projects/${projectId}/milestones`,
+              milestoneId
+            );
+            const milestoneSnap = await getDoc(milestoneRef);
+            if (milestoneSnap.exists()) {
+              tempMilestoneNames[milestoneId] =
+                milestoneSnap.data().name || "Unnamed Milestone";
+            }
+          }
+        }
+      }
+
+      setProjectNames(tempProjectNames);
+      setMilestoneNames(tempMilestoneNames);
+    };
+
+    fetchNames();
   }, [tasks]);
 
   useEffect(() => {
@@ -391,6 +440,14 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
               <div className="flex justify-between">
                 <div className="space-y-2 text-sm text-gray-700">
                   <p>Description: {task.description}</p>
+                  <p>
+                    <strong>Project:</strong>{" "}
+                    {projectNames[task.projectId] || "Loading..."}
+                  </p>
+                  <p>
+                    <strong>Milestone:</strong>{" "}
+                    {milestoneNames[task.milestoneId] || "Loading..."}
+                  </p>
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
                     <span>Assigned to: {task.assignedToName}</span>
