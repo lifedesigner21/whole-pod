@@ -31,6 +31,8 @@ interface Task {
   projectId: string;
   milestoneId: string;
   assignedToName: string;
+  projectName?: string;
+  milestoneName?: string;
 }
 
 const priorityOrder = {
@@ -63,17 +65,54 @@ const TopPriorityTasks = () => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const unsubscribe = onSnapshot(collectionGroup(db, "tasks"), (snapshot) => {
-      const fetched = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Task) }))
-        .filter((task) => task.assignedTo === user.uid);
+    const unsubscribe = onSnapshot(
+      collectionGroup(db, "tasks"),
+      async (snapshot) => {
+        const fetched = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...(doc.data() as Task) }))
+          .filter((task) => task.assignedTo === user.uid);
 
-      const sorted = fetched.sort(
-        (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
-      );
+        // Sort by priority
+        const sorted = fetched.sort(
+          (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
+        );
 
-      setTasks(sorted.slice(0, 3)); // Show top 3 only
-    });
+        // Fetch project and milestone names
+        const tasksWithNames = await Promise.all(
+          sorted.slice(0, 3).map(async (task) => {
+            try {
+              const projectSnap = await getDocs(collection(db, "projects"));
+              const projectDoc = projectSnap.docs.find(
+                (doc) => doc.id === task.projectId
+              );
+
+              const milestoneSnap = await getDocs(
+                collection(db, `projects/${task.projectId}/milestones`)
+              );
+              const milestoneDoc = milestoneSnap.docs.find(
+                (doc) => doc.id === task.milestoneId
+              );
+
+              return {
+                ...task,
+                projectName: projectDoc?.data()?.name || "Unknown Project",
+                milestoneName:
+                  milestoneDoc?.data()?.name || "Unknown Milestone",
+              };
+            } catch (err) {
+              console.error("Error fetching names:", err);
+              return {
+                ...task,
+                projectName: "Unknown",
+                milestoneName: "Unknown",
+              };
+            }
+          })
+        );
+
+        setTasks(tasksWithNames);
+      }
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -143,6 +182,7 @@ const TopPriorityTasks = () => {
                 <h3 className="font-semibold text-lg text-gray-900">
                   {task.title}
                 </h3>
+
                 <span
                   className={`text-xs px-2 py-1 rounded-full font-semibold ${getPriorityColor(
                     task.priority
@@ -151,7 +191,16 @@ const TopPriorityTasks = () => {
                   {task.priority}
                 </span>
               </div>
-              <p className="text-sm text-gray-700 mb-2">{task.description}</p>
+              <p className="text-sm text-gray-700 mb-2">
+                Desc: {task.description}
+              </p>
+              <p className="text-sm text-gray-500">
+                Project: <span className="font-medium">{task.projectName}</span>
+              </p>
+              <p className="text-sm text-gray-500">
+                Milestone:{" "}
+                <span className="font-medium">{task.milestoneName}</span>
+              </p>
               <p className="text-sm text-gray-500">
                 Designer: {task.assignedToName}
               </p>
