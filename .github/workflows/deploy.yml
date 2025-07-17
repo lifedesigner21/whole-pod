@@ -17,6 +17,10 @@ jobs:
         echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
         chmod 400 private_key.pem
 
+    - name: Copy files to EC2
+      run: |
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i private_key.pem" ./ ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app/
+
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
