@@ -270,9 +270,6 @@ const DesignerDashboard = () => {
                   <th className="text-left py-3 px-4 font-medium text-gray-700">
                     Tasks Completed
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">
-                    Closed At
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -292,7 +289,6 @@ const DesignerDashboard = () => {
                     <td className="py-3 px-4 text-gray-900">
                       {day.tasksCompleted}
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{day.closedAt}</td>
                   </tr>
                 ))}
               </tbody>

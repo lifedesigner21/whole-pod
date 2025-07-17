@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CreateTaskDialog from "./CreateTaskDialogue";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -45,25 +45,23 @@ const MilestoneDetailsPage = () => {
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null); // ✅ for editing
 
-  const fetchTasks = async () => {
+  useEffect(() => {
     if (!projectId || !milestoneId) return;
 
     const taskRef = collection(
       db,
       `projects/${projectId}/milestones/${milestoneId}/tasks`
     );
-    const snapshot = await getDocs(taskRef);
 
-    const taskList = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Task[];
+    const unsubscribe = onSnapshot(taskRef, (snapshot) => {
+      const taskList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Task[];
+      setTasks(taskList);
+    });
 
-    setTasks(taskList);
-  };
-
-  useEffect(() => {
-    fetchTasks();
+    return () => unsubscribe(); // clean up the listener
   }, [projectId, milestoneId]);
 
   const updateStatus = async (taskId: string, newStatus: string) => {
@@ -139,7 +137,6 @@ const MilestoneDetailsPage = () => {
         <CreateTaskDialog
           projectId={projectId!}
           milestoneId={milestoneId!}
-          onTaskCreated={fetchTasks}
         />
       </div>
 
@@ -167,7 +164,6 @@ const MilestoneDetailsPage = () => {
           milestoneId={milestoneId!}
           taskToEdit={taskToEdit}
           onTaskUpdated={() => {
-            fetchTasks();
             setTaskToEdit(null);
           }}
         />
