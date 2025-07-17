@@ -23,10 +23,10 @@ jobs:
 
     - name: Deploy to EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} <<EOF
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} bash -s << 'ENDSSH'
           cd /home/ubuntu/app
           docker build -t react-app .
           docker stop react-app || true
           docker rm react-app || true
           docker run -d -p 80:80 --name react-app react-app
-        EOF
+        ENDSSH
