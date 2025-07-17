@@ -18,7 +18,7 @@ jobs:
 
     - name: Copy files to EC2
       run: |
-        rsync -avz --exclude='.git' --include='.env' -e "ssh -o StrictHostKeyChecking=no -i private_key.pem" ./ ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app/
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i private_key.pem" ./ ubuntu@${{ secrets.EC2_PUBLIC_IP }}:/home/ubuntu/app/
 
     - name: Deploy to EC2
       run: |
