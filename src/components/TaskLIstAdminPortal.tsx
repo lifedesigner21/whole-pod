@@ -22,6 +22,8 @@ import {
   Check,
   MessageSquare,
   Trash,
+  Edit,
+  Pencil,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
@@ -35,6 +37,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import CreateTaskDialog from "./CreateTaskDialogue";
 
 interface Task {
   id: string;
@@ -101,6 +104,9 @@ const TaskList: React.FC<TaskListProps> = ({
     selectedTask?.id,
     chatTarget
   );
+
+  // State for edit dialog
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [runningTimers, setRunningTimers] = useState<Record<string, boolean>>(
@@ -175,6 +181,7 @@ const TaskList: React.FC<TaskListProps> = ({
       clearInterval(interval);
     };
   }, [runningTimers]);
+
   const handleDeleteTask = async (
     taskId: string,
     projectId: string,
@@ -196,6 +203,17 @@ const TaskList: React.FC<TaskListProps> = ({
       console.error("Error deleting task:", error);
     }
   };
+
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+  };
+
+  const handleTaskUpdated = () => {
+    setTaskToEdit(null);
+    // Refresh the task list or trigger a re-fetch
+    onTaskUpdate(taskToEdit!);
+  };
+
   const handleStart = (taskId: string) => {
     setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
   };
@@ -416,17 +434,21 @@ const TaskList: React.FC<TaskListProps> = ({
                   </span>
                 </CardTitle>
                 {userRole === "admin" && (
-                  <div
-                    className="flex items-end justify-end font-bold"
-                    onClick={() =>
-                      handleDeleteTask(
-                        task.id,
-                        task.projectId,
-                        task.milestoneId
-                      )
-                    }
-                  >
-                    <Trash className="w-4 h-4 text-red-600 cursor-pointer " />
+                  <div className="flex items-center justify-end gap-2">
+                    <Pencil
+                      className="w-4 h-4 text-yellow-600 cursor-pointer hover:yellow-blue-800"
+                      onClick={() => handleEditTask(task)}
+                    />
+                    <Trash
+                      className="w-4 h-4 text-red-600 cursor-pointer hover:text-red-800"
+                      onClick={() =>
+                        handleDeleteTask(
+                          task.id,
+                          task.projectId,
+                          task.milestoneId
+                        )
+                      }
+                    />
                   </div>
                 )}
               </CardHeader>
@@ -616,6 +638,16 @@ const TaskList: React.FC<TaskListProps> = ({
       {renderSection("🟡 Pending Tasks", grouped.pending)}
       {renderSection("🟠 In Progress Tasks", grouped.inProgress)}
       {renderSection("✅ Completed Tasks", grouped.completed)}
+
+      {/* Edit Task Dialog */}
+      {taskToEdit && (
+        <CreateTaskDialog
+          projectId={projectId}
+          milestoneId={milestoneId}
+          onTaskUpdated={handleTaskUpdated}
+          taskToEdit={taskToEdit}
+        />
+      )}
 
       <Sheet open={openChat} onOpenChange={setOpenChat}>
         <SheetContent side="right" className="w-full max-w-md p-6">
