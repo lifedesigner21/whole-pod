@@ -238,6 +238,7 @@ const CreateMilestoneDialog = forwardRef<
         await sendNotification();
 
         toast({ title: "Milestone created successfully" });
+        console.log("Milestone saved. Closing dialog.");
         onMilestoneCreated?.();
       }
 
