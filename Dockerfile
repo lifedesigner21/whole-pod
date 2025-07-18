@@ -2,7 +2,7 @@ FROM node:18 AS builder
 
 WORKDIR /app
 COPY package*.json ./
-COPY .env.prod .env
+COPY .env.prod ./
 RUN npm install
 COPY . .
 RUN npm run build
