@@ -511,7 +511,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {task.status !== "Completed" && (
+                  {task.status !== "Completed" && userRole !== "admin" && (
                     <>
                       {!runningTimers[task.id] ? (
                         <Button onClick={() => handleStart(task.id)} size="sm">

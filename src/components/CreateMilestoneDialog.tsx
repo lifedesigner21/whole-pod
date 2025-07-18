@@ -69,7 +69,7 @@ const defaultForm = {
 const CreateMilestoneDialog = forwardRef<
   CreateMilestoneDialogRef,
   CreateMilestoneDialogProps
->(({ projectId, projectName,clientName,clientId, onMilestoneCreated }, ref) => {
+>(({ projectId, projectName, clientName, clientId, onMilestoneCreated }, ref) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [isEdit, setIsEdit] = useState(false);
@@ -89,8 +89,8 @@ const CreateMilestoneDialog = forwardRef<
       } else {
         setForm({
           ...defaultForm,
-          client: clientName,
-          clientId: clientId,
+          client: clientName || "",
+          clientId: clientId || "",
         });
         setIsEdit(false);
       }
@@ -196,6 +196,25 @@ const CreateMilestoneDialog = forwardRef<
     }
 
     try {
+      // Create a clean data object without undefined values
+      const milestoneData = {
+        name: name || "",
+        description: description || "",
+        podDesigner: form.podDesigner || "",
+        podDesignerId: podDesignerId || "",
+        client: form.client || "",
+        clientId: clientId || "",
+        startDate: startDate || "",
+        endDate: endDate || "",
+        status: form.status || "Pending",
+        amount: Number(amount) || 0,
+        projectId: projectId || "",
+        projectName: projectName || "",
+        progress: 0,
+        createdAt: Timestamp.now(),
+        tasks: [],
+      };
+
       if (isEdit && form.id) {
         const milestoneRef = doc(
           db,
@@ -207,8 +226,7 @@ const CreateMilestoneDialog = forwardRef<
         await setDoc(
           milestoneRef,
           {
-            ...form,
-            amount: Number(amount),
+            ...milestoneData,
             updatedAt: Timestamp.now(),
           },
           { merge: true }
@@ -219,15 +237,7 @@ const CreateMilestoneDialog = forwardRef<
         // Create milestone and get its auto-generated ID
         const milestoneRef = await addDoc(
           collection(db, "projects", projectId, "milestones"),
-          {
-            ...form,
-            projectId,
-            projectName,
-            amount: Number(amount),
-            progress: 0,
-            createdAt: Timestamp.now(),
-            tasks: [],
-          }
+          milestoneData
         );
 
         // Update that milestone to include its own ID field

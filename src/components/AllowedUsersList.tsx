@@ -3,7 +3,7 @@ import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
+import { Trash, Edit } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 import {
@@ -17,6 +17,7 @@ import {
   AlertDialogAction,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
+import AddUserDialog from "./AddUserDialogue";
 
 interface AllowedUser {
   id: string;
@@ -28,6 +29,8 @@ interface AllowedUser {
 const AllowedUsersList = () => {
   const [users, setUsers] = useState<AllowedUser[]>([]);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [editUser, setEditUser] = useState<AllowedUser | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -57,62 +60,89 @@ const AllowedUsersList = () => {
     }
   };
 
+  const handleEdit = (user: AllowedUser) => {
+    setEditUser(user);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditUser(null);
+  };
+
   return (
-    <Card className="mt-6">
-      <CardContent className="space-y-3">
-        {users.length === 0 && (
-          <p className="text-sm text-gray-500">No users added yet.</p>
-        )}
-        {users.map((user) => (
-          <div
-            key={user.id}
-            className="grid grid-cols-4 items-center gap-4 p-3 border rounded"
-          >
-            <span className="text-sm">
-              <b>Name:</b> {user.name}
-            </span>
-            <span className="text-sm">
-              <b>Email:</b> {user.email}
-            </span>
-            <span className="text-sm">
-              <b>Role:</b>{" "}
-              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-            </span>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
+    <>
+      <Card className="mt-6">
+        <CardContent className="space-y-3">
+          {users.length === 0 && (
+            <p className="text-sm text-gray-500">No users added yet.</p>
+          )}
+          {users.map((user) => (
+            <div
+              key={user.id}
+              className="grid grid-cols-5 items-center gap-4 p-3 border rounded"
+            >
+              <span className="text-sm">
+                <b>Name:</b> {user.name}
+              </span>
+              <span className="text-sm">
+                <b>Email:</b> {user.email}
+              </span>
+              <span className="text-sm">
+                <b>Role:</b>{" "}
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+              </span>
+              <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setDeleteUserId(user.id)}
+                  onClick={() => handleEdit(user)}
                 >
-                  <Trash className="w-4 h-4 text-red-600" />
+                  <Edit className="w-4 h-4 text-blue-600" />
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete User</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this user? This action
-                    cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setDeleteUserId(null)}>
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteUserId(user.id)}
+                    >
+                      <Trash className="w-4 h-4 text-red-600" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete User</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this user? This action
+                        cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteUserId(null)}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <AddUserDialog
+        open={isEditDialogOpen}
+        onClose={handleCloseEditDialog}
+        editUser={editUser}
+      />
+    </>
   );
 };
 
