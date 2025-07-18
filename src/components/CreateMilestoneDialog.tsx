@@ -43,8 +43,8 @@ interface UserOption {
 interface CreateMilestoneDialogProps {
   projectId: string;
   projectName: string;
-  clientName: string;
-  clientId: string;
+  clientName?: string;
+  clientId?: string;
   onMilestoneCreated: () => void;
 }
 
