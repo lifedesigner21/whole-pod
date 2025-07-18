@@ -75,7 +75,8 @@ const AllowedUsersList = () => {
               <b>Email:</b> {user.email}
             </span>
             <span className="text-sm">
-              <b>Role:</b> {user.role}
+              <b>Role:</b>{" "}
+              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
             </span>
             <AlertDialog>
               <AlertDialogTrigger asChild>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +17,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ open, onClose }) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        <AddUser />
+        <AddUser onClose={onClose} />
         <DialogClose asChild>
           <Button variant="outline" className="mt-4 w-full">
             Close

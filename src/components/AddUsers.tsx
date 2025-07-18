@@ -7,7 +7,11 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
 
-const AddUser: React.FC = () => {
+interface AddUserProps {
+  onClose: () => void;
+}
+
+const AddUser: React.FC<AddUserProps> = ({ onClose }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"client" | "designer" | "admin">("designer");
@@ -56,6 +60,8 @@ const AddUser: React.FC = () => {
       setEmail("");
       setName("");
       setRole("designer");
+      // Close the dialog
+      onClose();
     } catch (error) {
       console.error("Error adding user:", error);
       toast({
@@ -84,7 +90,12 @@ const AddUser: React.FC = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Select value={role} onValueChange={(value) => setRole(value as "client" | "designer" | "admin")}>
+        <Select
+          value={role}
+          onValueChange={(value) =>
+            setRole(value as "client" | "designer" | "admin")
+          }
+        >
           <SelectTrigger>
             <SelectValue placeholder="Select role" />
           </SelectTrigger>
