@@ -193,7 +193,7 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
                     }`}
                   >
                     <span className="text-xs text-gray-700 italic mb-1">
-                      {msg.role}
+                      {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
                     </span>
                     <div
                       className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${

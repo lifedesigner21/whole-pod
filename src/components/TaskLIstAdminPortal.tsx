@@ -666,8 +666,8 @@ const TaskList: React.FC<TaskListProps> = ({
                         isOwnMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <span className="text-xs italic text-gray-600 mb-1">
-                        {msg.role}
+                      <span className="text-xs text-gray-700 italic mb-1">
+                        {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
                       </span>
 
                       <div

@@ -147,14 +147,14 @@ const TasksPage: React.FC = () => {
                         isOwnMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <span className="text-xs italic text-gray-600 mb-1">
-                        {msg.role}
+                      <span className="text-xs text-gray-700 italic mb-1">
+                        {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
                       </span>
 
                       <div
                         className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
-                            ? "bg-blue-100 text-right ml-auto"
+                            ? "bg-blue-100 text-left ml-auto"
                             : "bg-white text-left"
                         }`}
                       >
