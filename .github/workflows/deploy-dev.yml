@@ -25,7 +25,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_DEV_IP }} bash -s << 'ENDSSH'
             cd /home/ubuntu/app
             echo "${{ secrets.REACT_DEV_ENV_FILE }}" | base64 -d > .env
-            docker build -t react-app-dev .
+            docker build --build-arg NGINX_CONFIG=nginx.dev.conf -t react-app-dev .
             docker stop react-app-dev || true
             docker rm react-app-dev || true
             docker run -d -p 80:80 \
