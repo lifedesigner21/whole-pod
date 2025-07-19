@@ -442,36 +442,36 @@ const TaskList: React.FC<TaskListProps> = ({
     setEditMsgId(msg.id);
     setEditContent(msg.content);
   };
-    const handleSaveEdit = async () => {
-      if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
+  const handleSaveEdit = async () => {
+    if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
 
-      await updateDoc(
-        doc(
-          db,
-          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${editMsgId}`
-        ),
-        { content: editContent }
-      );
+    await updateDoc(
+      doc(
+        db,
+        `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${editMsgId}`
+      ),
+      { content: editContent }
+    );
 
-      setEditMsgId(null);
-      setEditContent("");
-    };
+    setEditMsgId(null);
+    setEditContent("");
+  };
 
-    const handleCancelEdit = () => {
-      setEditMsgId(null);
-      setEditContent("");
-    };
+  const handleCancelEdit = () => {
+    setEditMsgId(null);
+    setEditContent("");
+  };
 
-    const handleDelete = async (id: string) => {
-      if (!projectId || !milestoneId || !selectedTask) return;
+  const handleDelete = async (id: string) => {
+    if (!projectId || !milestoneId || !selectedTask) return;
 
-      await deleteDoc(
-        doc(
-          db,
-          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${id}`
-        )
-      );
-    };
+    await deleteDoc(
+      doc(
+        db,
+        `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${id}`
+      )
+    );
+  };
 
   const renderSection = (title: string, taskList: Task[]) => {
     if (taskList.length === 0) return null;
@@ -623,7 +623,7 @@ const TaskList: React.FC<TaskListProps> = ({
                     </>
                   )}
 
-                  {userRole === "admin" && task.status !== "Completed" && (
+                  {userRole === "admin" && (
                     <>
                       <Button
                         size="sm"

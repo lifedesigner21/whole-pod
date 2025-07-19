@@ -176,7 +176,8 @@ const TopPriorityTasks = () => {
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="border p-4 rounded-lg bg-white shadow-sm"
+              className="border p-4 rounded-lg bg-white shadow-sm cursor-pointer hover:bg-gray-50 transition"
+              onClick={() => navigate("/my-workboard")}
             >
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-semibold text-lg text-gray-900">
@@ -208,8 +209,9 @@ const TopPriorityTasks = () => {
                 Due: {formatDate(task.dueDate)}
               </p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="font-medium">Status:</span>
-                <Popover
+                <span className="font-medium">Status: {task.status}</span>
+
+                {/* <Popover
                   open={openPopoverId === task.id}
                   onOpenChange={(open) =>
                     setOpenPopoverId(open ? task.id : null)
@@ -237,7 +239,7 @@ const TopPriorityTasks = () => {
                       </Button>
                     ))}
                   </PopoverContent>
-                </Popover>
+                </Popover> */}
               </div>
             </div>
           ))}
