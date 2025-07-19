@@ -93,6 +93,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   project,
   projectId,
   projectName,
+  onMilestoneCreated
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(
@@ -374,7 +375,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         ref={milestoneDialogRef}
         projectId={projectId}
         projectName={projectName || project.name || ""}
-        onMilestoneCreated={() => {}}
+        onMilestoneCreated={() => {onMilestoneCreated?.(); setIsDialogOpen(false);}}
       />
     </>
   );

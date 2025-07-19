@@ -237,8 +237,8 @@ const CreateMilestoneDialog = forwardRef<
             },
             { merge: true }
           );
-          toast({ title: "Milestone updated successfully" });
           onMilestoneCreated?.();
+          toast({ title: "Milestone updated successfully" });
         } else {
           // Create milestone and get its auto-generated ID
           const milestoneRef = await addDoc(
@@ -252,10 +252,10 @@ const CreateMilestoneDialog = forwardRef<
           });
 
           await sendNotification();
+          onMilestoneCreated?.();
 
           toast({ title: "Milestone created successfully" });
           console.log("Milestone saved. Closing dialog.");
-          onMilestoneCreated?.();
         }
 
         setOpen(false);
