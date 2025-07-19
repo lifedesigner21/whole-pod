@@ -22,6 +22,8 @@ import {
   Check,
   MessageSquare,
   Trash,
+  Edit,
+  Pencil,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
@@ -35,6 +37,14 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import CreateTaskDialog from "./CreateTaskDialogue";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 interface Task {
   id: string;
@@ -102,6 +112,9 @@ const TaskList: React.FC<TaskListProps> = ({
     chatTarget
   );
 
+  // State for edit dialog
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [runningTimers, setRunningTimers] = useState<Record<string, boolean>>(
     {}
@@ -117,6 +130,8 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [revisionReason, setRevisionReason] = useState("");
+  const [editMsgId, setEditMsgId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     const assigned =
@@ -175,6 +190,7 @@ const TaskList: React.FC<TaskListProps> = ({
       clearInterval(interval);
     };
   }, [runningTimers]);
+
   const handleDeleteTask = async (
     taskId: string,
     projectId: string,
@@ -196,6 +212,17 @@ const TaskList: React.FC<TaskListProps> = ({
       console.error("Error deleting task:", error);
     }
   };
+
+  const handleEditTask = (task: Task) => {
+    setTaskToEdit(task);
+  };
+
+  const handleTaskUpdated = () => {
+    setTaskToEdit(null);
+    // Refresh the task list or trigger a re-fetch
+    onTaskUpdate(taskToEdit!);
+  };
+
   const handleStart = (taskId: string) => {
     setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
   };
@@ -373,6 +400,19 @@ const TaskList: React.FC<TaskListProps> = ({
     console.log("🎯 COMPLETE: Process completed, dialog closed");
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "High":
+        return "bg-red-100 text-red-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const formatMinutes = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -398,6 +438,40 @@ const TaskList: React.FC<TaskListProps> = ({
     inProgress: filteredTasks.filter((t) => t.status === "In Progress"),
     completed: filteredTasks.filter((t) => t.status === "Completed"),
   };
+  const handleEdit = (msg: any) => {
+    setEditMsgId(msg.id);
+    setEditContent(msg.content);
+  };
+    const handleSaveEdit = async () => {
+      if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
+
+      await updateDoc(
+        doc(
+          db,
+          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${editMsgId}`
+        ),
+        { content: editContent }
+      );
+
+      setEditMsgId(null);
+      setEditContent("");
+    };
+
+    const handleCancelEdit = () => {
+      setEditMsgId(null);
+      setEditContent("");
+    };
+
+    const handleDelete = async (id: string) => {
+      if (!projectId || !milestoneId || !selectedTask) return;
+
+      await deleteDoc(
+        doc(
+          db,
+          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${id}`
+        )
+      );
+    };
 
   const renderSection = (title: string, taskList: Task[]) => {
     if (taskList.length === 0) return null;
@@ -411,22 +485,30 @@ const TaskList: React.FC<TaskListProps> = ({
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   {task.title}
-                  <span className="text-xs rounded px-2 py-1 bg-gray-100 text-gray-700">
+                  <span
+                    className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${getPriorityColor(
+                      task.priority
+                    )}`}
+                  >
                     {task.priority}
                   </span>
                 </CardTitle>
                 {userRole === "admin" && (
-                  <div
-                    className="flex items-end justify-end font-bold"
-                    onClick={() =>
-                      handleDeleteTask(
-                        task.id,
-                        task.projectId,
-                        task.milestoneId
-                      )
-                    }
-                  >
-                    <Trash className="w-4 h-4 text-red-600 cursor-pointer " />
+                  <div className="flex items-center justify-end gap-2">
+                    <Pencil
+                      className="w-4 h-4 text-yellow-600 cursor-pointer hover:yellow-blue-800"
+                      onClick={() => handleEditTask(task)}
+                    />
+                    <Trash
+                      className="w-4 h-4 text-red-600 cursor-pointer hover:text-red-800"
+                      onClick={() =>
+                        handleDeleteTask(
+                          task.id,
+                          task.projectId,
+                          task.milestoneId
+                        )
+                      }
+                    />
                   </div>
                 )}
               </CardHeader>
@@ -482,7 +564,10 @@ const TaskList: React.FC<TaskListProps> = ({
                               status === task.status ? "default" : "ghost"
                             }
                             className="w-full justify-start text-left"
-                            onClick={() => onStatusChange(task.id, status)}
+                            onClick={() => {
+                              onStatusChange(task.id, status);
+                              setOpenPopoverId(null);
+                            }}
                           >
                             {status}
                           </Button>
@@ -511,7 +596,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {task.status !== "Completed" && (
+                  {task.status !== "Completed" && userRole !== "admin" && (
                     <>
                       {!runningTimers[task.id] ? (
                         <Button onClick={() => handleStart(task.id)} size="sm">
@@ -617,6 +702,16 @@ const TaskList: React.FC<TaskListProps> = ({
       {renderSection("🟠 In Progress Tasks", grouped.inProgress)}
       {renderSection("✅ Completed Tasks", grouped.completed)}
 
+      {/* Edit Task Dialog */}
+      {taskToEdit && (
+        <CreateTaskDialog
+          projectId={projectId}
+          milestoneId={milestoneId}
+          onTaskUpdated={handleTaskUpdated}
+          taskToEdit={taskToEdit}
+        />
+      )}
+
       <Sheet open={openChat} onOpenChange={setOpenChat}>
         <SheetContent side="right" className="w-full max-w-md p-6">
           <SheetHeader>
@@ -666,23 +761,63 @@ const TaskList: React.FC<TaskListProps> = ({
                         isOwnMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <span className="text-xs italic text-gray-600 mb-1">
-                        {msg.role}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs italic text-gray-700 mb-1">
+                          {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
+                        </span>
 
+                        {isOwnMessage && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="text-gray-500 hover:text-gray-700">
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(msg)}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(msg.id)}
+                                className="text-red-600"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+
+                      {/* chat bubble */}
                       <div
-                        className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
+                        className={`w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
-                            ? "bg-blue-100 text-right ml-auto"
+                            ? "bg-blue-100 text-left ml-auto"
                             : "bg-white text-left"
                         }`}
                       >
                         <div className="font-semibold text-gray-800 mb-1">
                           {msg.sender}
                         </div>
-                        <div className="text-black whitespace-pre-wrap">
-                          {msg.content}
-                        </div>
+
+                        {editMsgId === msg.id ? (
+                          <>
+                            <textarea
+                              className="w-full p-2 border rounded text-sm"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-2 text-xs text-blue-600 mt-2">
+                              <button onClick={handleSaveEdit}>Save</button>
+                              <button onClick={handleCancelEdit}>Cancel</button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="whitespace-pre-wrap text-black">
+                            {msg.content}
+                          </div>
+                        )}
+
                         {time && (
                           <div className="text-[11px] text-gray-500 mt-2">
                             {time}

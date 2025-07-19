@@ -257,7 +257,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Expertise */}
-        {userRole !== "admin" && (
+        {userRole !== "admin" && userRole !== "client" && (
           <div className="md:col-span-2">
             <Label>Expertise</Label>
             <div className="flex gap-2">

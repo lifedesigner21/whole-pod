@@ -150,7 +150,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       );
       for (const docSnap of adminSnap.docs) {
         await addDoc(collection(db, `users/${docSnap.id}/notifications`), {
-          message: `A new task was created: ${form.title}.`,
+          message: `A new task was created: ${form.title} created by ${user.displayName}`,
           type: "task",
           read: false,
           createdAt: Timestamp.now(),

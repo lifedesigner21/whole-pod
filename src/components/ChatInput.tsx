@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState,useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
 import {
@@ -30,6 +30,14 @@ const ChatInput = ({
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { user, userRole } = useAuth();
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = textarea.scrollHeight + "px";
+    }
+  }, [message]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -61,7 +69,7 @@ const ChatInput = ({
             handleSendMessage();
           }
         }}
-        className="flex-1 px-4 py-[8px] rounded-md border border-gray-300"
+        className="flex-1 px-4  rounded-md border border-gray-300 resize-none overflow-hidden flex items-center text-base leading-tight "
       />
       <Button onClick={handleSendMessage}>Send</Button>
     </div>

@@ -27,6 +27,8 @@ const ClientDashboard = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    if (!user?.uid) return;
+
     const fetchProjects = async () => {
       try {
         if (!user?.uid) return;
@@ -115,7 +117,7 @@ const ClientDashboard = () => {
     // };
 
     // fetchNotifications();
-  }, []);
+  }, [user]);
 
   const handleViewDetails = (projectId: string) => {
     navigate(`/client/project/${projectId}`);

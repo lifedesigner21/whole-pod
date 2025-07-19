@@ -1,3 +1,5 @@
+Production docker file should not change anything here.
+
 FROM node:18 AS builder
 
 WORKDIR /app

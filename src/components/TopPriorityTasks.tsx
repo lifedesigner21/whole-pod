@@ -231,7 +231,7 @@ const TopPriorityTasks = () => {
                         key={status}
                         variant={status === task.status ? "default" : "ghost"}
                         className="w-full justify-start text-left"
-                        onClick={() => onStatusChange(task.id, status)}
+                        onClick={() => {onStatusChange(task.id, status); setOpenPopoverId(null);}}
                       >
                         {status}
                       </Button>
