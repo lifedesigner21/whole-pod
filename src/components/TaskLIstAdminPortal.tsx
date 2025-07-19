@@ -38,6 +38,13 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import CreateTaskDialog from "./CreateTaskDialogue";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 interface Task {
   id: string;
@@ -123,6 +130,8 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [revisionReason, setRevisionReason] = useState("");
+  const [editMsgId, setEditMsgId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     const assigned =
@@ -429,6 +438,40 @@ const TaskList: React.FC<TaskListProps> = ({
     inProgress: filteredTasks.filter((t) => t.status === "In Progress"),
     completed: filteredTasks.filter((t) => t.status === "Completed"),
   };
+  const handleEdit = (msg: any) => {
+    setEditMsgId(msg.id);
+    setEditContent(msg.content);
+  };
+    const handleSaveEdit = async () => {
+      if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
+
+      await updateDoc(
+        doc(
+          db,
+          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${editMsgId}`
+        ),
+        { content: editContent }
+      );
+
+      setEditMsgId(null);
+      setEditContent("");
+    };
+
+    const handleCancelEdit = () => {
+      setEditMsgId(null);
+      setEditContent("");
+    };
+
+    const handleDelete = async (id: string) => {
+      if (!projectId || !milestoneId || !selectedTask) return;
+
+      await deleteDoc(
+        doc(
+          db,
+          `projects/${projectId}/milestones/${milestoneId}/tasks/${selectedTask.id}/messages/${id}`
+        )
+      );
+    };
 
   const renderSection = (title: string, taskList: Task[]) => {
     if (taskList.length === 0) return null;
@@ -711,23 +754,63 @@ const TaskList: React.FC<TaskListProps> = ({
                         isOwnMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <span className="text-xs text-gray-700 italic mb-1">
-                        {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs italic text-gray-700 mb-1">
+                          {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
+                        </span>
 
+                        {isOwnMessage && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="text-gray-500 hover:text-gray-700">
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(msg)}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(msg.id)}
+                                className="text-red-600"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+
+                      {/* chat bubble */}
                       <div
-                        className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
+                        className={`w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
-                            ? "bg-blue-100 text-right ml-auto"
+                            ? "bg-blue-100 text-left ml-auto"
                             : "bg-white text-left"
                         }`}
                       >
                         <div className="font-semibold text-gray-800 mb-1">
                           {msg.sender}
                         </div>
-                        <div className="text-black whitespace-pre-wrap">
-                          {msg.content}
-                        </div>
+
+                        {editMsgId === msg.id ? (
+                          <>
+                            <textarea
+                              className="w-full p-2 border rounded text-sm"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-2 text-xs text-blue-600 mt-2">
+                              <button onClick={handleSaveEdit}>Save</button>
+                              <button onClick={handleCancelEdit}>Cancel</button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="whitespace-pre-wrap text-black">
+                            {msg.content}
+                          </div>
+                        )}
+
                         {time && (
                           <div className="text-[11px] text-gray-500 mt-2">
                             {time}
