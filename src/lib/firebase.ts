@@ -7,13 +7,13 @@ import { getFunctions } from 'firebase/functions';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyD1scYOYocpRootizX0DQYrMEuYF_xjJuw",
-  authDomain: "designer-s-pod.firebaseapp.com",
-  projectId: "designer-s-pod",
-  storageBucket: "designer-s-pod.firebasestorage.app",
-  messagingSenderId: "473144105754",
-  appId: "1:473144105754:web:23b02ac3849adeeffe2aa3",
-  measurementId: "G-0WY0Z9JG3N",
+  apiKey: "AIzaSyCZJ9PCzN1mD8lMiOg89506ILyzTFtAchQ",
+  authDomain: "designerpod-development.firebaseapp.com",
+  projectId: "designerpod-development",
+  storageBucket: "designerpod-development.firebasestorage.app",
+  messagingSenderId: "918453580875",
+  appId: "1:918453580875:web:81c08a8432578bd02389ce",
+  measurementId: "G-WQ3G86N1LF"
 };
 
 const app = initializeApp(firebaseConfig);
