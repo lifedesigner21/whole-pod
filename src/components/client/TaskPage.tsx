@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, updateDoc, deleteDoc,doc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, ListChecks, User } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import ChatInput from "@/components/ChatInput";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+
 
 interface Task {
   id: string;
@@ -27,6 +38,9 @@ const TasksPage: React.FC = () => {
   const [chatTarget, setChatTarget] = useState<"admin-client" | "admin-designer" | null>(null);
   const { user, userRole } = useAuth();
   const messages = useChatMessages(projectId!, milestoneId!, selectedTask?.id, chatTarget);
+  const [editMsgId, setEditMsgId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -59,8 +73,64 @@ const TasksPage: React.FC = () => {
     setOpenChat(true);
   };
 
+  const handleEdit = (msg: any) => {
+    setEditMsgId(msg.id);
+    setEditContent(msg.content);
+  };
+  const handleSaveEdit = async () => {
+    if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
+
+    const msgRef = doc(
+      db,
+      "projects",
+      projectId,
+      "milestones",
+      milestoneId,
+      "tasks",
+      selectedTask.id,
+      "messages",
+      editMsgId
+    );
+
+    await updateDoc(msgRef, { content: editContent });
+    setEditMsgId(null);
+    setEditContent("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditMsgId(null);
+    setEditContent("");
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!projectId || !milestoneId || !selectedTask) return;
+
+    const msgRef = doc(
+      db,
+      "projects",
+      projectId,
+      "milestones",
+      milestoneId,
+      "tasks",
+      selectedTask.id,
+      "messages",
+      id
+    );
+
+    await deleteDoc(msgRef);
+  };
+
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+       <Button
+                variant="outline"
+                onClick={() => navigate(-1)}
+                className="self-start w-fit text-gray-700"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
         <p className="text-gray-600 mt-1">All tasks in this milestone</p>
@@ -81,7 +151,10 @@ const TasksPage: React.FC = () => {
                       : "bg-green-100 text-green-800"
                   }`}
                 >
-                  {task.priority?.toLowerCase() ?? "LOW"}
+                  {task.priority
+                    ? task.priority.charAt(0).toUpperCase() +
+                      task.priority.slice(1).toLowerCase()
+                    : "Low"}
                 </span>
               </div>
               <p className="text-md text-gray-500 mt-1">{task.description}</p>
@@ -127,7 +200,7 @@ const TasksPage: React.FC = () => {
 
           {selectedTask && chatTarget && (
             <div className="mt-4 flex flex-col gap-4 h-full">
-              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded ">
                 {messages.map((msg) => {
                   const date = msg.timestamp?.toDate?.();
                   const time = date
@@ -147,23 +220,62 @@ const TasksPage: React.FC = () => {
                         isOwnMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <span className="text-xs text-gray-700 italic mb-1">
-                        {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-700 italic mb-1">
+                          {msg.role.charAt(0).toUpperCase() + msg.role.slice(1)}
+                        </span>
+
+                        {isOwnMessage && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="text-gray-500 hover:text-gray-700">
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(msg)}>
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(msg.id)}
+                                className="text-red-600"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
 
                       <div
-                        className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
+                        className={` w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
-                            ? "bg-blue-100 text-left ml-auto"
-                            : "bg-white text-left"
+                            ? "bg-blue-100 text-left ml-auto pr-[10%]"
+                            : "bg-white text-left pl-[10%] "
                         }`}
                       >
                         <div className="font-semibold text-gray-800 mb-1">
                           {msg.sender}
                         </div>
-                        <div className="text-black whitespace-pre-wrap">
-                          {msg.content}
-                        </div>
+
+                        {editMsgId === msg.id ? (
+                          <div className="space-y-2">
+                            <textarea
+                              className="w-full p-2 border rounded text-sm"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                            />
+                            <div className="flex justify-end space-x-2 text-xs text-blue-600">
+                              <button onClick={handleSaveEdit}>Save</button>
+                              <button onClick={handleCancelEdit}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-black whitespace-pre-wrap">
+                            {msg.content}
+                          </div>
+                        )}
+
                         {time && (
                           <div className="text-[11px] text-gray-500 mt-2">
                             {time}
