@@ -80,7 +80,7 @@ const AllowedUsersList = () => {
           {users.map((user) => (
             <div
               key={user.id}
-              className="grid grid-cols-5 items-center gap-4 p-3 border rounded"
+              className="flex flex-col sm:grid sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4 p-3 border rounded"
             >
               <span className="text-sm">
                 <b>Name:</b> {user.name}
@@ -92,7 +92,7 @@ const AllowedUsersList = () => {
                 <b>Role:</b>{" "}
                 {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 self-start sm:self-center">
                 <Button
                   variant="ghost"
                   size="icon"
