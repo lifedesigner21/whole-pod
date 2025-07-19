@@ -69,9 +69,12 @@ const ChatInput = ({
             handleSendMessage();
           }
         }}
-        className="flex-1 px-4  rounded-md border border-gray-300 resize-none overflow-hidden flex items-center text-base leading-tight "
+        rows={1}
+        className="flex-1 px-4 py-2 rounded-md border border-gray-300 resize-none text-base leading-6 h-12"
       />
-      <Button onClick={handleSendMessage}>Send</Button>
+      <Button className="h-12 px-5" onClick={handleSendMessage}>
+        Send
+      </Button>
     </div>
   );
 };
