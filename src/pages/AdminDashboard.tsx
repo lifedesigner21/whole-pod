@@ -456,7 +456,6 @@ const AdminDashboard = () => {
                         className="flex-1 sm:flex-none"
                       >
                         <Eye className="w-3 h-3 sm:mr-1" />
-                        <span className="hidden sm:inline">View</span>
                       </Button>
 
                       <Button
@@ -469,7 +468,6 @@ const AdminDashboard = () => {
                         className="flex-1 sm:flex-none"
                       >
                         <Edit className="w-3 h-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Edit</span>
                       </Button>
 
                       <Button
@@ -479,7 +477,6 @@ const AdminDashboard = () => {
                         className="text-destructive hover:text-destructive-foreground hover:bg-destructive flex-1 sm:flex-none"
                       >
                         <Trash2 className="w-3 h-3 sm:mr-1" />
-                        <span className="hidden sm:inline">Delete</span>
                       </Button>
                     </div>
                   </div>
