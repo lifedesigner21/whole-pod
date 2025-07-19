@@ -56,19 +56,19 @@ const DashboardRouter = () => {
   const { userRole, user, loading } = useAuth();
 
   // Still loading auth info
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+ if (loading || !user || !userRole) {
+   return <LoadingSpinner />;
+ }
 
   // Auth loaded, but user or role not available — don't redirect immediately
-  if (!user || !userRole) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-gray-600">No role assigned. Please log in again.</p>
-        <Navigate to="/login" replace />
-      </div>
-    );
-  }
+  // if (!user || !userRole) {
+  //   return (
+  //     <div className="text-center py-10">
+  //       <p className="text-gray-600">No role assigned. Please log in again.</p>
+  //       <Navigate to="/login" replace />
+  //     </div>
+  //   );
+  // }
 
   // Render dashboard based on role
   switch (userRole) {

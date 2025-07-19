@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,16 +8,28 @@ import {
 import { Button } from "@/components/ui/button";
 import AddUser from "./AddUsers";
 
+interface AllowedUser {
+  id: string;
+  email: string;
+  name: string;
+  role: "client" | "designer" | "admin";
+}
+
 interface AddUserDialogProps {
   open: boolean;
   onClose: () => void;
+  editUser?: AllowedUser | null;
 }
 
-const AddUserDialog: React.FC<AddUserDialogProps> = ({ open, onClose }) => {
+const AddUserDialog: React.FC<AddUserDialogProps> = ({
+  open,
+  onClose,
+  editUser,
+}) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        <AddUser />
+        <AddUser onClose={onClose} editUser={editUser} />
         <DialogClose asChild>
           <Button variant="outline" className="mt-4 w-full">
             Close

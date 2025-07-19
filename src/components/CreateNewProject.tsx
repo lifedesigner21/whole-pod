@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserOption {
   id: string;
@@ -85,6 +86,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
   const [clients, setClients] = useState<UserOption[]>([]);
   const [designers, setDesigners] = useState<UserOption[]>([]);
+  const {user} = useAuth();
 
   const handleSubmit = async () => {
     const project = {
@@ -141,7 +143,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         );
         for (const docSnap of adminSnap.docs) {
           await addDoc(collection(db, `users/${docSnap.id}/notifications`), {
-            message: `You have created a new project: ${name}.`,
+            message: `You have created a new project: ${name} created by ${user.displayName}.`,
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
