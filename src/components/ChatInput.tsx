@@ -15,6 +15,7 @@ import {
   where,
 } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const ChatInput = ({
   projectId,
@@ -30,6 +31,7 @@ const ChatInput = ({
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { user, userRole } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -50,6 +52,17 @@ const ChatInput = ({
       role: userRole,
       sender: user?.displayName || "client",
       chatTarget,
+    });
+
+    // Show notification for message sent
+    const senderName = user?.displayName || "client";
+    const recipientRole = chatTarget === "admin-client" 
+      ? (userRole === "admin" ? "client" : "admin")
+      : (userRole === "admin" ? "designer" : "admin");
+    
+    toast({
+      title: "Message Sent",
+      description: `You have sent a new message to the ${recipientRole}`,
     });
 
     setMessage("");
