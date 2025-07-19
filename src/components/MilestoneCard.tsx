@@ -99,7 +99,7 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
             <CardTitle className="text-lg font-semibold">
               {milestone.name}
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 rounded-full">
               <Badge className={getStatusColor(milestone.status)}>
                 {milestone.status}
               </Badge>

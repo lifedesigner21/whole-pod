@@ -72,6 +72,23 @@ const Navigation = () => {
     await updateDoc(ref, { read: true });
   };
 
+  const getTimeAgo = (createdAt: any) => {
+    if (!createdAt) return "";
+    
+    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt.seconds * 1000);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 1) return "just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   const handleProfileClick = () => navigate("/profile");
 
   const handleSignOut = async () => {
@@ -114,11 +131,7 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <img
-              src="/LD_logo.png" 
-              alt="Life Designer Logo"
-              className="h-8"
-            />
+            <h1 className="text-xl font-bold text-gray-900">ProjectHub</h1>
             <span
               className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
                 userRole
@@ -156,8 +169,13 @@ const Navigation = () => {
                     onClick={() => handleMarkAsRead(n.id)}
                     className={!n.read ? "bg-gray-100" : ""}
                   >
-                    <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                    {n.message}
+                    <div className="flex items-start w-full">
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">{n.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">{getTimeAgo(n.createdAt)}</p>
+                      </div>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
