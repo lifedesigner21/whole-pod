@@ -92,7 +92,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     const project = {
       ...form,
       totalAmount: Number(form.totalAmount),
-      paidAmount: Number(form.paidAmount),
+      paidAmount: 0,
     };
 
     try {
@@ -361,7 +361,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             />
           </div>
 
-          <div className="grid gap-1">
+          {/* <div className="grid gap-1">
             <label className="text-sm font-medium text-gray-700">
               Paid Amount (₹)
             </label>
@@ -371,7 +371,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
               value={form.paidAmount}
               onChange={(e) => setForm({ ...form, paidAmount: e.target.value })}
             />
-          </div>
+          </div> */}
 
           <div className="grid gap-1">
             <label className="text-sm font-medium text-gray-700">
