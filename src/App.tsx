@@ -18,8 +18,10 @@ import MilestoneDetailsPage from "./components/MilestoneDetailsPage";
 import MyWorkboard from "./pages/MyWorkBoard";
 import ProjectDetailPage from "./pages/project/[projectId]";
 import Profile from "./components/Profile";
-import InvoicesPage from "./pages/InvoicesPage"
+import InvoicesPage from "./pages/InvoicesPage";
 import TasksPage from "./components/client/TaskPage";
+import InvoiceDashboard from "./components/InvoiceAndPayment";
+import Users from "./components/UsersList";
 
 const queryClient = new QueryClient();
 
@@ -56,9 +58,9 @@ const DashboardRouter = () => {
   const { userRole, user, loading } = useAuth();
 
   // Still loading auth info
- if (loading || !user || !userRole) {
-   return <LoadingSpinner />;
- }
+  if (loading || !user || !userRole) {
+    return <LoadingSpinner />;
+  }
 
   // Auth loaded, but user or role not available — don't redirect immediately
   // if (!user || !userRole) {
@@ -123,6 +125,8 @@ const AppContent = () => {
           <Route path="/my-workboard" element={<MyWorkboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/client/invoices" element={<InvoicesPage />} />
+          <Route path="/payments" element={<InvoiceDashboard />} />
+          <Route path="usersList" element={<Users />} />
         </Routes>
       </div>
     </BrowserRouter>

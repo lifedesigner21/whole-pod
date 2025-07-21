@@ -65,6 +65,7 @@ interface Milestone {
   tasks: Task[];
   progress: number;
   projectName?: string;
+  clientId?: string;
 }
 
 interface MilestoneCardsProps {
@@ -93,7 +94,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   project,
   projectId,
   projectName,
-  onMilestoneCreated
+  onMilestoneCreated,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(
@@ -103,6 +104,9 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, any[]>>({});
+  const [pendingAmount, setPendingAmount] = useState(0);
+  const [paymentDueDate, setPaymentDueDate] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("Pending");
 
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -127,14 +131,18 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         url: invoiceUrl.trim(),
         milestoneId: selectedMilestone.id,
         milestoneName: selectedMilestone.name,
-        amount: selectedMilestone.amount,
         projectId,
         projectName: selectedMilestone.projectName || "Unknown Project",
+        clientId: selectedMilestone.clientId,
+        pendingAmount,
+        paymentDueDate,
+        status: paymentStatus,
         createdAt: new Date().toISOString(),
       });
       setIsDialogOpen(false);
       setInvoiceUrl("");
       setSelectedMilestone(null);
+      console.log("Invoice URL saved successfully");
     } catch (error) {
       console.error("Error saving invoice URL:", error);
     } finally {
@@ -347,6 +355,33 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               disabled
               className="bg-gray-50"
             />
+            <Label htmlFor="invoice-url">Amount To Pay</Label>
+            <Input
+              id="amount-paid"
+              type="number"
+              placeholder="Enter amount to pay for the milestone"
+              value={pendingAmount}
+              onChange={(e) => setPendingAmount(Number(e.target.value))}
+            />
+            <Label htmlFor="invoice-url">Payment Due</Label>
+            <Input
+              id="payment-due"
+              type="date"
+              value={paymentDueDate}
+              onChange={(e) => setPaymentDueDate(e.target.value)}
+            />
+            <Label>Payment Status</Label>
+            <select
+              value={paymentStatus}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setPaymentStatus(e.target.value)
+              }
+              className="w-full border rounded px-3 py-2 mt-1"
+              required={true}
+            >
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
             <Label htmlFor="invoice-url">Invoice URL</Label>
             <Input
               id="invoice-url"
@@ -375,7 +410,10 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         ref={milestoneDialogRef}
         projectId={projectId}
         projectName={projectName || project.name || ""}
-        onMilestoneCreated={() => {onMilestoneCreated?.(); setIsDialogOpen(false);}}
+        onMilestoneCreated={() => {
+          onMilestoneCreated?.();
+          setIsDialogOpen(false);
+        }}
       />
     </>
   );

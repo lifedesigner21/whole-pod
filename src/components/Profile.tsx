@@ -28,6 +28,7 @@ const Profile: React.FC = () => {
     residentialAddress: "",
     dateOfBirth: "",
     expertise: [] as string[],
+    gstNo: "",
   });
 
   const [newExpertise, setNewExpertise] = useState("");
@@ -182,6 +183,21 @@ const Profile: React.FC = () => {
             onChange={handleChange}
           />
         </div>
+
+        {/* GST No */}
+        {
+          userRole !== "admin" && userRole !== "designer" && (
+
+        <div>
+          <Label>GST No</Label>
+          <Input
+            name="gst"
+            value={formData.gstNo}
+            onChange={handleChange}
+          />
+        </div>
+          )
+        }
 
         {/* Aadhar Number */}
         <div>

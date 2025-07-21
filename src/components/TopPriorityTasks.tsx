@@ -247,10 +247,10 @@ const TopPriorityTasks = () => {
 
         <div className="text-right">
           <button
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-sm text-white bg-black p-2 m-2 rounded-md font-medium"
             onClick={() => navigate("/my-workboard")}
           >
-            View More →
+            My Workboard
           </button>
         </div>
       </CardContent>
