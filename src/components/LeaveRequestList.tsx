@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import LeaveRequestDialog from "./LeaveRequestDialog";
 
 interface LeaveRequest {
   id: string;
@@ -96,7 +97,10 @@ const LeaveRequestList = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Leave Requests</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Leave Requests</CardTitle>
+          <LeaveRequestDialog />
+        </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {leaveRequests.length === 0 ? (

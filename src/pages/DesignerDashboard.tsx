@@ -214,8 +214,6 @@ const DesignerDashboard = () => {
             Welcome back! Here's your workspace overview
           </p>
         </div>
-
-        <LeaveRequestDialog />
       </div>
 
       {/* Today's Summary */}
