@@ -124,7 +124,7 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-4 sm:p-6 space-y-6 bg-gray-50 min-h-screen">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Client Dashboard</h1>
         <p className="text-gray-600 mt-1">
@@ -145,7 +145,7 @@ const ClientDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-2xl font-bold text-indigo-600">
@@ -273,7 +273,7 @@ const ClientDashboard = () => {
           <CardTitle>Active Projects</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {projects
               .filter((project) => project.status === "Active")
               .map((project) => (
@@ -295,7 +295,7 @@ const ClientDashboard = () => {
             <CardTitle>Projects on Hold</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {projects
                 .filter((project) => project.status === "On Hold")
                 .map((project) => (
@@ -318,7 +318,7 @@ const ClientDashboard = () => {
             <CardTitle>Completed Projects</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {projects
                 .filter((project) => project.status === "Completed")
                 .map((project) => (

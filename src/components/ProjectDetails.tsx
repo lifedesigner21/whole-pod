@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,6 +28,7 @@ import {
 import { db } from "@/lib/firebase";
 import { formatDate } from "@/lib/utils";
 import MilestoneCards from "./MilestoneCards";
+import CreateMilestoneDialog, { CreateMilestoneDialogRef } from "./CreateMilestoneDialog";
 
 interface Task {
   id: string;
@@ -50,6 +51,27 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientEmail, setClientEmail] = useState<string>("");
   const [milestones, setMilestones] = useState([]);
+  const milestoneDialogRef = useRef<CreateMilestoneDialogRef | null>(null);
+
+  const handleMilestoneCreated = () => {
+    // Refresh milestones when a new one is created
+    const fetchMilestones = async () => {
+      try {
+        const snapshot = await getDocs(
+          collection(db, "projects", project.id!, "milestones")
+        );
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMilestones(data);
+      } catch (err) {
+        console.error("Error fetching milestones:", err);
+      }
+    };
+    
+    if (project.id) fetchMilestones();
+  };
 
   useEffect(() => {
     const q = query(
@@ -230,6 +252,8 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
         project={{ milestones }}
         projectId={project.id}
         projectName={project.name}
+        milestoneDialogRef={milestoneDialogRef}
+        onMilestoneCreated={handleMilestoneCreated}
       />
     </div>
   );

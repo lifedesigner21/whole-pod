@@ -42,6 +42,7 @@ const Navigation = () => {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // 🔔 Fetch notifications
   useEffect(() => {

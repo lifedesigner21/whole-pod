@@ -191,8 +191,8 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center">
+    <div className="p-4 sm:p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-600 mt-1">
@@ -225,7 +225,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -323,7 +323,7 @@ const AdminDashboard = () => {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -364,7 +364,7 @@ const AdminDashboard = () => {
                 key={project.id}
                 className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start lg:items-center">
                   <div className="lg:col-span-3">
                     <h3 className="font-semibold text-gray-900">
                       {project.name}
@@ -448,13 +448,15 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="lg:col-span-1">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-start lg:justify-center">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => navigate(`/project/${project.id}`)}
+                        className="flex-1 sm:flex-none"
                       >
-                        <Eye className="w-3 h-3" />
+                        <Eye className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">View</span>
                       </Button>
 
                       <Button
@@ -464,17 +466,20 @@ const AdminDashboard = () => {
                           setEditingProject(project);
                           setOpenDialog(true);
                         }}
+                        className="flex-1 sm:flex-none"
                       >
-                        <Edit className="w-3 h-3" />
+                        <Edit className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
 
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDelete(project.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-destructive hover:text-destructive-foreground hover:bg-destructive flex-1 sm:flex-none"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Delete</span>
                       </Button>
                     </div>
                   </div>

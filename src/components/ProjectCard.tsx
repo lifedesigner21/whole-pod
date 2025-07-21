@@ -103,9 +103,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           <Progress value={project.progress} className="h-2" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div className="space-y-2">
-            <div className="flex justify-between text-gray-600 text-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between text-gray-600 text-sm gap-2">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>Start: {formatDate(project.startDate)}</span>
