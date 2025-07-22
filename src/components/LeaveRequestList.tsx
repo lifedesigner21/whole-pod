@@ -99,7 +99,7 @@ const LeaveRequestList = () => {
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>Leave Requests</CardTitle>
-          <LeaveRequestDialog />
+          {userRole !== "admin" && <LeaveRequestDialog />}
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
