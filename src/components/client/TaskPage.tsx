@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "@/lib/firebase";
 import {
@@ -65,6 +65,7 @@ const TasksPage: React.FC = () => {
   const [clientUid, setClientUid] = useState<string | null>(null);
   const [designerUid, setDesignerUid] = useState<string | null>(null);
   const navigate = useNavigate();
+  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,8 +100,6 @@ const TasksPage: React.FC = () => {
 
     fetchData();
   }, [projectId, milestoneId]);
-
-
 
   const handleOpenChat = (
     task: Task,
@@ -159,7 +158,19 @@ const TasksPage: React.FC = () => {
     await deleteDoc(msgRef);
   };
 
-
+  useEffect(() => {
+    if (openChat && endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, openChat]);
+  useEffect(() => {
+    if (openChat) {
+      // Wait for the DOM to finish rendering messages
+      setTimeout(() => {
+        endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100); // slight delay ensures scroll happens after messages are in DOM
+    }
+  }, [openChat]);
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -323,6 +334,7 @@ const TasksPage: React.FC = () => {
                     </div>
                   );
                 })}
+                <div ref={endOfMessagesRef} />
               </div>
 
               {selectedTask &&

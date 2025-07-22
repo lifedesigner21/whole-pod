@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,6 +135,7 @@ const TaskList: React.FC<TaskListProps> = ({
   const [editContent, setEditContent] = useState("");
   const [clientUid, setClientUid] = useState<string | null>(null);
   const [designerUid, setDesignerUid] = useState<string | null>(null);
+  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const assigned =
@@ -210,6 +211,20 @@ const TaskList: React.FC<TaskListProps> = ({
 
     fetchUids();
   }, [selectedTask]);
+
+  useEffect(() => {
+    if (openChat && endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, openChat]);
+  useEffect(() => {
+    if (openChat) {
+      // Wait for the DOM to finish rendering messages
+      setTimeout(() => {
+        endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100); // slight delay ensures scroll happens after messages are in DOM
+    }
+  }, [openChat]);
 
   const handleDeleteTask = async (
     taskId: string,
@@ -444,10 +459,9 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const handleOpenChat = (task: Task) => {
     setSelectedTask(task);
-    // Choose default chat channel based on role
     if (userRole === "client") setChatTarget("admin-client");
     else if (userRole === "designer") setChatTarget("admin-designer");
-    else setChatTarget(null);
+    else setChatTarget("admin-client");
     setOpenChat(true);
   };
 
@@ -847,6 +861,7 @@ const TaskList: React.FC<TaskListProps> = ({
                     </div>
                   );
                 })}
+                <div ref={endOfMessagesRef} />
               </div>
 
               {chatTarget && (
