@@ -1,32 +1,28 @@
 "use client";
 
-import { useRef, useState,useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  Timestamp,
-  where,
-} from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface ChatInputProps {
+  projectId: string;
+  milestoneId: string;
+  taskId?: string;
+  chatTarget: "admin-client" | "admin-designer";
+  clientUid?: string | null;
+  designerUid?: string | null;
+}
 
 const ChatInput = ({
   projectId,
   milestoneId,
   taskId,
   chatTarget,
-}: {
-  projectId: string;
-  milestoneId: string;
-  taskId?: string;
-  chatTarget: "admin-client" | "admin-designer";
-}) => {
+  clientUid,
+  designerUid,
+}: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { user, userRole } = useAuth();
@@ -39,22 +35,58 @@ const ChatInput = ({
     }
   }, [message]);
 
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
+const handleSendMessage = async () => {
+  if (!message.trim()) return;
 
-    const path = `projects/${projectId}/milestones/${milestoneId}/tasks/${taskId}/messages`;
+  if (!user) {
+    console.warn("⚠️ No authenticated user found.");
+    return;
+  }
 
-    await addDoc(collection(db, path), {
+  const path = `projects/${projectId}/milestones/${milestoneId}/tasks/${taskId}/messages`;
+
+  try {
+    // 1. Send the message
+    const msgRef = await addDoc(collection(db, path), {
       content: message.trim(),
       timestamp: serverTimestamp(),
       role: userRole,
-      sender: user?.displayName || "client",
+      sender: user?.displayName || "User",
       chatTarget,
     });
 
+    // 2. Resolve recipient UID
+    let recipientUid: string | null = null;
+    if (chatTarget === "admin-client") {
+      recipientUid = clientUid;
+    } else if (chatTarget === "admin-designer") {
+      recipientUid = designerUid;
+    }
+
+
+    // 3. Send notification
+    if (recipientUid) {
+      const notifRef = await addDoc(
+        collection(db, `users/${recipientUid}/notifications`),
+        {
+          message: `You got a new message from ${user.displayName || "Admin"}`,
+          type: "chat",
+          read: false,
+          createdAt: serverTimestamp(),
+        }
+      );
+    } else {
+      console.warn("⚠️ No recipient UID found. Skipping notification.");
+    }
+
     setMessage("");
     textareaRef.current?.focus();
-  };
+  } catch (err) {
+    console.error("❌ Error sending message or notification:", err);
+  }
+};
+
+
 
   return (
     <div className="flex gap-2 mb-20">
@@ -80,4 +112,3 @@ const ChatInput = ({
 };
 
 export default ChatInput;
-

@@ -182,7 +182,11 @@ const Navigation = () => {
                     className={!n.read ? "bg-gray-100" : ""}
                   >
                     <div className="flex items-start w-full">
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
+                      {n.type === "chat" ? (
+                        <Bell className="w-4 h-4 mr-2 text-blue-500 mt-0.5" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 mr-2 text-green-500 mt-0.5" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm">{n.message}</p>
                         <p className="text-xs text-gray-500 mt-1">

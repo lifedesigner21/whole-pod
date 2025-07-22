@@ -120,7 +120,6 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   });
 
   useEffect(() => {
-    console.log("🔄 INIT: Initializing timers from tasks");
     const initialTimers: Record<string, number> = {};
     tasks.forEach((task) => {
       if (task.actualMinutes && task.actualMinutes > 0) {
@@ -132,7 +131,6 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
         );
       }
     });
-    console.log("🔄 INIT: Initial timers:", initialTimers);
     setTimers(initialTimers);
   }, [tasks]);
 
