@@ -70,7 +70,10 @@ const TopPriorityTasks = () => {
       async (snapshot) => {
         const fetched = snapshot.docs
           .map((doc) => ({ id: doc.id, ...(doc.data() as Task) }))
-          .filter((task) => task.assignedTo === user.uid);
+          .filter(
+            (task) =>
+              task.assignedTo === user.uid && task.status !== "Completed"
+          );
 
         // Sort by priority
         const sorted = fetched.sort(
