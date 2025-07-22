@@ -1,24 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, updateDoc, deleteDoc,doc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, ListChecks, User } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import ChatInput from "@/components/ChatInput";
-import { useChatMessages } from "@/hooks/useChatMessages";
-import { useAuth } from "@/contexts/AuthContext";
+import {
+  MessageSquare,
+  ListChecks,
+  User,
+  MoreVertical,
+  ArrowLeft,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChatInput from "@/components/ChatInput";
+import { useChatMessages } from "@/hooks/useChatMessages";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-
 
 interface Task {
   id: string;
@@ -35,16 +50,36 @@ const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [openChat, setOpenChat] = useState(false);
-  const [chatTarget, setChatTarget] = useState<"admin-client" | "admin-designer" | null>(null);
+  const [chatTarget, setChatTarget] = useState<
+    "admin-client" | "admin-designer" | null
+  >(null);
   const { user, userRole } = useAuth();
-  const messages = useChatMessages(projectId!, milestoneId!, selectedTask?.id, chatTarget);
+  const messages = useChatMessages(
+    projectId!,
+    milestoneId!,
+    selectedTask?.id,
+    chatTarget
+  );
   const [editMsgId, setEditMsgId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [clientUid, setClientUid] = useState<string | null>(null);
+  const [designerUid, setDesignerUid] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchData = async () => {
       if (!projectId || !milestoneId) return;
+
+      const projectRef = doc(db, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
+
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data();
+        setClientUid(projectData.clientId || null);
+        setDesignerUid(projectData.designerId || null);
+      } else {
+        console.warn("⚠️ Project not found");
+      }
 
       const tasksRef = collection(
         db,
@@ -54,20 +89,23 @@ const TasksPage: React.FC = () => {
         milestoneId,
         "tasks"
       );
-
       const snapshot = await getDocs(tasksRef);
       const taskList: Task[] = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Task),
       }));
-
       setTasks(taskList);
     };
 
-    fetchTasks();
+    fetchData();
   }, [projectId, milestoneId]);
 
-  const handleOpenChat = (task: Task, target: "admin-client" | "admin-designer") => {
+
+
+  const handleOpenChat = (
+    task: Task,
+    target: "admin-client" | "admin-designer"
+  ) => {
     setSelectedTask(task);
     setChatTarget(target);
     setOpenChat(true);
@@ -77,6 +115,7 @@ const TasksPage: React.FC = () => {
     setEditMsgId(msg.id);
     setEditContent(msg.content);
   };
+
   const handleSaveEdit = async () => {
     if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
 
@@ -121,16 +160,18 @@ const TasksPage: React.FC = () => {
   };
 
 
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-       <Button
-                variant="outline"
-                onClick={() => navigate(-1)}
-                className="self-start w-fit text-gray-700"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
+      <Button
+        variant="outline"
+        onClick={() => navigate(-1)}
+        className="self-start w-fit text-gray-700"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back
+      </Button>
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
         <p className="text-gray-600 mt-1">All tasks in this milestone</p>
@@ -151,10 +192,7 @@ const TasksPage: React.FC = () => {
                       : "bg-green-100 text-green-800"
                   }`}
                 >
-                  {task.priority
-                    ? task.priority.charAt(0).toUpperCase() +
-                      task.priority.slice(1).toLowerCase()
-                    : "Low"}
+                  {task.priority}
                 </span>
               </div>
               <p className="text-md text-gray-500 mt-1">{task.description}</p>
@@ -200,7 +238,7 @@ const TasksPage: React.FC = () => {
 
           {selectedTask && chatTarget && (
             <div className="mt-4 flex flex-col gap-4 h-full">
-              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded ">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded scrollbar-hide">
                 {messages.map((msg) => {
                   const date = msg.timestamp?.toDate?.();
                   const time = date
@@ -251,7 +289,7 @@ const TasksPage: React.FC = () => {
                         className={` w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
                             ? "bg-blue-100 text-left ml-auto pr-[10%]"
-                            : "bg-white text-left pl-[10%] "
+                            : "bg-white text-left pl-[10%]"
                         }`}
                       >
                         <div className="font-semibold text-gray-800 mb-1">
@@ -287,12 +325,23 @@ const TasksPage: React.FC = () => {
                 })}
               </div>
 
-              <ChatInput
-                projectId={projectId!}
-                milestoneId={milestoneId!}
-                taskId={selectedTask.id}
-                chatTarget={chatTarget}
-              />
+              {selectedTask &&
+              chatTarget &&
+              ((chatTarget === "admin-client" && !clientUid) ||
+                (chatTarget === "admin-designer" && !designerUid)) ? (
+                <div className="text-center text-sm text-gray-500">
+                  Loading chat...
+                </div>
+              ) : (
+                <ChatInput
+                  projectId={projectId!}
+                  milestoneId={milestoneId!}
+                  taskId={selectedTask.id}
+                  chatTarget={chatTarget}
+                  clientUid={clientUid}
+                  designerUid={designerUid}
+                />
+              )}
             </div>
           )}
         </SheetContent>

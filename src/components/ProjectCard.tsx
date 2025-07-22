@@ -38,7 +38,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
     }
   };
-  console.log(showDesignerInfo, "showDesignerInfo");
 
   // 🟢 Embedded logic to update project progress from milestones
   const handleViewDetailsAndUpdateProgress = async () => {

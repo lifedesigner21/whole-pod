@@ -35,6 +35,7 @@ import {
   getDocs,
   collection,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import CreateTaskDialog from "./CreateTaskDialogue";
@@ -132,6 +133,8 @@ const TaskList: React.FC<TaskListProps> = ({
   const [revisionReason, setRevisionReason] = useState("");
   const [editMsgId, setEditMsgId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [clientUid, setClientUid] = useState<string | null>(null);
+  const [designerUid, setDesignerUid] = useState<string | null>(null);
 
   useEffect(() => {
     const assigned =
@@ -190,6 +193,23 @@ const TaskList: React.FC<TaskListProps> = ({
       clearInterval(interval);
     };
   }, [runningTimers]);
+
+  useEffect(() => {
+    const fetchUids = async () => {
+      if (!selectedTask?.projectId) return;
+
+      const projectRef = doc(db, "projects", selectedTask.projectId);
+      const projectSnap = await getDoc(projectRef);
+
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data();
+        setClientUid(projectData.clientId || null);
+        setDesignerUid(projectData.designerId || null);
+      }
+    };
+
+    fetchUids();
+  }, [selectedTask]);
 
   const handleDeleteTask = async (
     taskId: string,
@@ -741,7 +761,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded scrollbar-hide">
                 {messages.map((msg) => {
                   const date = msg.timestamp?.toDate?.();
                   const time = date
@@ -835,6 +855,8 @@ const TaskList: React.FC<TaskListProps> = ({
                   milestoneId={milestoneId!}
                   taskId={selectedTask.id}
                   chatTarget={chatTarget}
+                  clientUid={clientUid}
+                  designerUid={designerUid}
                 />
               )}
             </div>

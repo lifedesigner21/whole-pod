@@ -142,7 +142,6 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
       setIsDialogOpen(false);
       setInvoiceUrl("");
       setSelectedMilestone(null);
-      console.log("Invoice URL saved successfully");
     } catch (error) {
       console.error("Error saving invoice URL:", error);
     } finally {
