@@ -109,13 +109,31 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const q = query(collection(db, "projects"), orderBy("createdDate", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const projList = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const projectData = { id: doc.id, ...doc.data() };
+
+          const milestonesSnap = await getDocs(
+            collection(db, `projects/${doc.id}/milestones`)
+          );
+
+          const milestones = milestonesSnap.docs.map((d) => d.data());
+          const total = milestones.length;
+          const completed = milestones.filter((m) => m.progress === 100).length;
+
+          const projectProgress =
+            total > 0 ? Math.round((completed / total) * 100) : 0;
+
+          return {
+            ...projectData,
+            progress: projectProgress,
+          };
+        })
+      );
       setProjects(projList);
     });
+
 
     return () => unsubscribe();
   }, []);
