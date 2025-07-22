@@ -31,15 +31,15 @@ export async function syncPaidAmountFromInvoice(projectId: string, milestoneId: 
       collection(db, "invoiceUrls"),
       where("projectId", "==", projectId),
       where("milestoneId", "==", milestoneId),
-      where("status", "==", "paid") // only process if already paid
+      // where("status", "==", "paid") // only process if already paid
     );
 
     const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
-      console.warn("No PAID invoice found for this milestone and project.");
-      return;
-    }
+    // if (querySnapshot.empty) {
+    //   console.warn("No PAID invoice found for this milestone and project.");
+    //   return;
+    // }
 
     // Assuming one invoice per milestone
     const invoiceDoc = querySnapshot.docs[0];
@@ -67,6 +67,8 @@ export async function syncPaidAmountFromInvoice(projectId: string, milestoneId: 
     await updateDoc(projectRef, {
       paidAmount: updatedPaidAmount,
     });
+
+    console.log(`✅ Paid amount updated to ₹${updatedPaidAmount} for project ${projectId}`);
 
     console.log(`✅ Paid amount updated to ₹${updatedPaidAmount} for project ${projectId}`);
   } catch (error) {

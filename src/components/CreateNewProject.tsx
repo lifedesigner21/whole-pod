@@ -86,13 +86,13 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
   const [clients, setClients] = useState<UserOption[]>([]);
   const [designers, setDesigners] = useState<UserOption[]>([]);
-  const {user} = useAuth();
+  const { user } = useAuth();
 
   const handleSubmit = async () => {
     const project = {
       ...form,
       totalAmount: Number(form.totalAmount),
-      paidAmount: 0,
+      paidAmount: mode === "edit" ? Number(form.paidAmount) : 0,
     };
 
     try {
@@ -113,6 +113,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           maxRevisions: 5,
           pendingFeedback: [],
           milestones: [],
+          paidAmount: project.paidAmount,
         });
 
         // 🔔 Notifications
@@ -289,7 +290,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </Select>
           </div>
 
-                    <div className="md:col-span-2">
+          <div className="md:col-span-2">
             <label className="text-sm font-medium text-gray-700">
               Project Brief
             </label>
