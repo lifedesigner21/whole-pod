@@ -16,7 +16,13 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import CreateSubtaskDialog from "./CreateSubTasiDialog";
-import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -52,6 +58,7 @@ interface Task {
   revisionReasons?: string[];
   estimatedMinutes?: number;
   completedProof?: string;
+  startedAt?: string;
 }
 
 interface FilteredTaskListProps {
@@ -120,19 +127,26 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   });
 
   useEffect(() => {
-    const initialTimers: Record<string, number> = {};
-    tasks.forEach((task) => {
-      if (task.actualMinutes && task.actualMinutes > 0) {
-        initialTimers[task.id] = task.actualMinutes * 60;
-        console.log(
-          `🔄 INIT: Task ${task.id} (${task.title}) has ${
-            task.actualMinutes
-          } minutes (${task.actualMinutes * 60} seconds)`
-        );
-      }
-    });
-    setTimers(initialTimers);
-  }, [tasks]);
+  const initialTimers: Record<string, number> = {};
+
+  tasks.forEach((task) => {
+    let totalSeconds = (task.actualMinutes || 0) * 60;
+
+    if (task.startedAt && !task.onHoldReason && task.status !== "Completed") {
+      const startedAt = new Date(task.startedAt).getTime();
+      const now = Date.now();
+      const diffSeconds = Math.floor((now - startedAt) / 1000);
+      totalSeconds += diffSeconds;
+
+      // Also mark this task as running
+      setRunningTimers((prev) => ({ ...prev, [task.id]: true }));
+    }
+
+    initialTimers[task.id] = totalSeconds;
+  });
+
+  setTimers(initialTimers);
+}, [tasks]);
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -212,9 +226,24 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     };
   }, [runningTimers]);
 
-  const handleStart = (taskId: string) => {
+  const handleStart = async (taskId: string) => {
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return;
+
+  const taskRef = doc(
+    db,
+    `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+  );
+
+  try {
+    await updateDoc(taskRef, {
+      startedAt: new Date().toISOString(),
+    });
     setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
-  };
+  } catch (err) {
+    console.error("❌ Failed to start timer:", err);
+  }
+};
 
   const handleHold = (taskId: string) => {
     setShowHoldDialogFor(taskId);
@@ -259,6 +288,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     const updateData = {
       onHoldReason: holdReason.trim(),
       actualMinutes: totalMinutes,
+      startedAt: null,
     };
 
     console.log("🔄 HOLD: Updating database with:", updateData);
@@ -326,6 +356,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
       actualMinutes: totalMinutes,
       status: "Completed",
       completedProof: proofUrl.trim(),
+      startedAt: null,
     };
 
     console.log("🎯 COMPLETE: Updating task with:", updateData);
@@ -416,17 +447,17 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   };
 
   const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case "High":
-      return "bg-red-100 text-red-800";
-    case "Medium":
-      return "bg-yellow-100 text-yellow-800";
-    case "Low":
-      return "bg-green-100 text-green-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
+    switch (priority) {
+      case "High":
+        return "bg-red-100 text-red-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   const renderTasks = (
     taskList: Task[],
@@ -441,7 +472,9 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 {task.title}
-                <span className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${task.priority}`}>
+                <span
+                  className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${task.priority}`}
+                >
                   {task.priority}
                 </span>
               </CardTitle>
@@ -502,7 +535,10 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                                 status === task.status ? "default" : "ghost"
                               }
                               className="w-full justify-start text-left"
-                              onClick={() => {onStatusChange(task.id, status); setOpenPopoverId(null);}}
+                              onClick={() => {
+                                onStatusChange(task.id, status);
+                                setOpenPopoverId(null);
+                              }}
                             >
                               {status}
                             </Button>

@@ -8,7 +8,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
+import { formatDate, syncPaidAmountFromInvoice } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
@@ -139,8 +139,17 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         status: paymentStatus,
         createdAt: new Date().toISOString(),
       });
+
+      // ✅ Call the sync function if the status is 'paid'
+      console.log("Invoice URL saved successfully");
+      if (paymentStatus === "Paid") {
+        await syncPaidAmountFromInvoice(projectId);
+      }
       setIsDialogOpen(false);
       setInvoiceUrl("");
+      setPaymentDueDate("");
+      setPendingAmount(0);
+      setPaymentStatus("Pending");
       setSelectedMilestone(null);
     } catch (error) {
       console.error("Error saving invoice URL:", error);

@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { updateDoc, doc } from "firebase/firestore";
+import { syncPaidAmountFromInvoice } from "@/lib/utils";
 
 interface Invoice {
   id: string;
@@ -40,6 +47,24 @@ const InvoiceDashboard = () => {
           id: doc.id,
           ...(doc.data() as Omit<Invoice, "id">),
         }));
+
+        // 🟡 Sort: Pending first, Paid last (and keep createdAt descending within same status)
+        result.sort((a, b) => {
+          const statusPriority = (status: string) =>
+            status === "Pending" ? 0 : status === "Paid" ? 1 : 2;
+
+          const aPriority = statusPriority(a.status);
+          const bPriority = statusPriority(b.status);
+
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+
+          // Within same status, sort by createdAt descending
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
         setInvoices(result);
         setFilteredInvoices(result);
       } catch (error) {
@@ -71,6 +96,30 @@ const InvoiceDashboard = () => {
       setFilteredInvoices(filtered);
     }
   }, [searchTerm, invoices]);
+
+  const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
+    try {
+      const invoiceRef = doc(db, "invoiceUrls", invoiceId);
+      await updateDoc(invoiceRef, {
+        status: newStatus,
+      });
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === invoiceId ? { ...inv, status: newStatus } : inv
+        )
+      );
+
+      // If status is Paid, sync the paidAmount for the corresponding project
+      if (newStatus === "Paid") {
+        const invoice = invoices.find((inv) => inv.id === invoiceId);
+        if (invoice?.projectId) {
+          await syncPaidAmountFromInvoice(invoice.projectId);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update invoice status:", err);
+    }
+  };
 
   const totalRevenue = invoices
     .filter((inv) => inv.status === "Paid")
@@ -161,7 +210,9 @@ const InvoiceDashboard = () => {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Invoice Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Invoice Dashboard
+          </h1>
         </div>
       </div>
 
@@ -275,13 +326,37 @@ const InvoiceDashboard = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-row items-center gap-2">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(
-                            invoice.status
-                          )} w-fit`}
-                        >
-                          {invoice.status}
-                        </span>
+                        {invoice.status === "Pending" ? (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-bold cursor-pointer ${getStatusColor(
+                                  invoice.status
+                                )} w-fit`}
+                              >
+                                {invoice.status}
+                              </span>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-32 p-2">
+                              <p
+                                className="text-sm cursor-pointer bg-green-100 text-green-800 hover:bg-green-200 px-2 py-1 rounded font-medium"
+                                onClick={() =>
+                                  handleStatusUpdate(invoice.id, "Paid")
+                                }
+                              >
+                                Paid
+                              </p>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-bold cursor-not-allowed ${getStatusColor(
+                              invoice.status
+                            )} w-fit`}
+                          >
+                            {invoice.status}
+                          </span>
+                        )}
                         {getDaysUntilDue(
                           invoice.paymentDueDate,
                           invoice.status

@@ -246,7 +246,7 @@ const Navigation = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handlePaymentClick}>
                       <IndianRupeeIcon className="mr-2 h-4 w-4" />
-                      <span>Payments</span>
+                      <span>Payments and Invoices</span>
                     </DropdownMenuItem>
                   </>
                 )}
