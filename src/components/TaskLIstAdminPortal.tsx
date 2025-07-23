@@ -1,4 +1,4 @@
-import { useEffect, useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,7 @@ import {
   collection,
   deleteDoc,
   getDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import CreateTaskDialog from "./CreateTaskDialogue";
@@ -68,6 +69,8 @@ interface Task {
   projectName?: string;
   milestoneName?: string;
   isApproved?: boolean;
+  assignedTo?: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 interface TaskListProps {
@@ -138,10 +141,13 @@ const TaskList: React.FC<TaskListProps> = ({
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    const visibleTasks = tasks.filter((task) => task.isDeleted !== true); // show only not-deleted
     const assigned =
       userRole === "designer"
-        ? tasks.filter((task) => task.assignedToName === user?.displayName)
-        : tasks;
+        ? visibleTasks.filter(
+            (task) => task.assignedToName === user?.displayName
+          )
+        : visibleTasks;
     setFilteredTasks(assigned);
   }, [tasks, userRole, user]);
 
@@ -231,6 +237,10 @@ const TaskList: React.FC<TaskListProps> = ({
     projectId: string,
     milestoneId: string
   ) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+    if (!confirmDelete) return;
     try {
       const taskRef = doc(
         db,
@@ -241,7 +251,7 @@ const TaskList: React.FC<TaskListProps> = ({
         "tasks",
         taskId
       );
-      await deleteDoc(taskRef);
+      await updateDoc(taskRef, { isDeleted: true });
       console.log("Task deleted successfully");
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -399,8 +409,12 @@ const TaskList: React.FC<TaskListProps> = ({
         )
       );
 
-      const totalTasks = tasksSnapshot.size;
-      const completedTasks = tasksSnapshot.docs.filter(
+      const visibleTasks = tasksSnapshot.docs.filter(
+        (doc) => doc.data().isDeleted !== true
+      );
+
+      const totalTasks = visibleTasks.length;
+      const completedTasks = visibleTasks.filter(
         (doc) => doc.data().status === "Completed"
       ).length;
 
@@ -657,7 +671,7 @@ const TaskList: React.FC<TaskListProps> = ({
                     </>
                   )}
 
-                  {userRole === "admin" && (
+                  {/* {userRole === "admin" && (
                     <>
                       <Button
                         size="sm"
@@ -688,6 +702,96 @@ const TaskList: React.FC<TaskListProps> = ({
                         onClick={() => {
                           setSelectedTask(task);
                           setShowRevisionDialog(true);
+                        }}
+                      >
+                        Request Revision
+                      </Button>
+                    </>
+                  )} */}
+
+                  {userRole === "admin" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const taskRef = doc(
+                            db,
+                            `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+                          );
+
+                          try {
+                            // ✅ 1. Update task status
+                            await updateDoc(taskRef, {
+                              isApproved: true,
+                              isRevision: false,
+                              status: "Completed",
+                            });
+                            console.log("✅ APPROVED: Task updated");
+
+                            // ✅ 2. Send notification to designer
+                            const notificationRef = doc(
+                              collection(
+                                db,
+                                `users/${task.assignedTo}/notifications`
+                              )
+                            );
+                            await setDoc(notificationRef, {
+                              message: `Your task "${
+                                task.title
+                              }" is approved by ${
+                                user.displayName || "Admin"
+                              }.`,
+                              type: "task",
+                              read: false,
+                              createdAt: new Date(),
+                            });
+                            console.log("✅ Notification sent for approval");
+                          } catch (err) {
+                            console.error(
+                              "❌ APPROVED: Failed to update or notify",
+                              err
+                            );
+                          }
+                        }}
+                        variant="outline"
+                        className="border border-green-500 text-green-500 hover:text-green-600"
+                        disabled={task.isApproved}
+                      >
+                        {task.isApproved ? "Approved" : "Approve"}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={async () => {
+                          try {
+                            setSelectedTask(task);
+                            setShowRevisionDialog(true);
+
+                            // ✅ Send notification for revision request
+                            const notificationRef = doc(
+                              collection(
+                                db,
+                                `users/${task.assignedTo}/notifications`
+                              )
+                            );
+                            await setDoc(notificationRef, {
+                              message: `Your task "${
+                                task.title
+                              }" has received a revision request from ${
+                                user.displayName || "Admin"
+                              }.`,
+                              type: "task",
+                              read: false,
+                              createdAt: new Date(),
+                            });
+                            console.log("✅ Notification sent for revision");
+                          } catch (err) {
+                            console.error(
+                              "❌ REVISION: Failed to send notification",
+                              err
+                            );
+                          }
                         }}
                       >
                         Request Revision

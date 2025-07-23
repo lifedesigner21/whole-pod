@@ -43,6 +43,7 @@ import ChatInput from "./ChatInput";
 import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "./CreateMilestoneDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface Subtask {
   title: string;
@@ -128,6 +129,10 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   };
 
   const handleDeleteMilestone = async (milestoneId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this Milestone?"
+    );
+    if (!confirmDelete) return;
     try {
       const milestoneRef = doc(
         db,
@@ -136,8 +141,12 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         "milestones",
         milestoneId
       );
-      await deleteDoc(milestoneRef);
-      onMilestoneCreated()
+      await updateDoc(milestoneRef, { isDeleted: true });
+      onMilestoneCreated();
+      toast({
+        title: "Deleted",
+        description: "Milestone has been marked as deleted.",
+      });
       console.log("Milestone deleted successfully");
     } catch (error) {
       console.error("Error deleting Milestone:", error);

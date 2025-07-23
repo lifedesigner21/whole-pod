@@ -114,6 +114,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           pendingFeedback: [],
           milestones: [],
           paidAmount: project.paidAmount,
+          isDeleted: false
         });
 
         // 🔔 Notifications

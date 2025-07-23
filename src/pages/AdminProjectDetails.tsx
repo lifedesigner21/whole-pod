@@ -95,7 +95,10 @@ const AdminProjectDetails = () => {
 
       {/* Milestone Cards */}
       <MilestoneCards
-        project={{ milestones, name: project.name }}
+        project={{
+          milestones: milestones.filter((milestone) => !milestone.isDeleted),
+          name: project.name,
+        }}
         projectId={project.id}
         projectName={project.name}
         milestoneDialogRef={milestoneRef}

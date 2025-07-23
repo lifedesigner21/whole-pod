@@ -134,7 +134,6 @@ const AdminDashboard = () => {
       setProjects(projList);
     });
 
-
     return () => unsubscribe();
   }, []);
 
@@ -160,14 +159,21 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (projectId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this project?"
+    );
+    if (!confirmDelete) return;
+
     try {
-      await deleteDoc(doc(db, "projects", projectId));
+      const ref = doc(db, "projects", projectId);
+      await updateDoc(ref, { isDeleted: true });
+
       toast({
-        title: "Success",
-        description: "Project has been deleted successfully.",
+        title: "Deleted",
+        description: "Project has been marked as deleted.",
       });
     } catch (err) {
-      console.error("Failed to delete project:", err);
+      console.error("Failed to mark project as deleted:", err);
       toast({
         title: "Error",
         description: "Failed to delete project.",
@@ -182,12 +188,13 @@ const AdminDashboard = () => {
       project.designer.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || project.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const isVisible = !project.isDeleted; // 👈 Only show non-deleted
+    return matchesSearch && matchesStatus && isVisible;
   });
 
-  const totalProjects = projects.length;
+  const totalProjects = projects.filter(project => project.isDeleted !== true).length;
   const completedProjects = projects.filter(
-    (p) => p.status === "Completed"
+    (p) => p.status === "Completed" && p.isDeleted !== true
   ).length;
   const totalRevenue = projects.reduce((sum, p) => sum + p.paidAmount, 0);
   const pendingRevenue = projects.reduce(

@@ -41,6 +41,7 @@ interface Task {
   actualMinutes: number;
   priority: string;
   status: string;
+  isDeleted ?: boolean; // New field to mark deletion
 }
 
 const DesignerDashboard = () => {
@@ -117,13 +118,13 @@ const DesignerDashboard = () => {
       const today = format(new Date(), "yyyy-MM-dd");
 
       const newTasks = tasks.filter((task) => {
-        if (!task.createdAt) return false;
+        if (!task.createdAt || task.isDeleted === true) return false;
         const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
         return createdDate === today;
       });
 
       const pending = tasks.filter(
-        (t) => t.status.toLowerCase() !== "completed"
+        (t) => t.status.toLowerCase() !== "completed" && t.isDeleted !== true
       ).length;
 
       setTaskStats({
@@ -142,7 +143,7 @@ const DesignerDashboard = () => {
     const unsubscribe = onSnapshot(collectionGroup(db, "tasks"), (snapshot) => {
       const allTasks = snapshot.docs
         .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
-        .filter((task) => task.assignedTo === user.uid);
+        .filter((task) => task.assignedTo === user.uid && task.isDeleted !== true);
 
       const history: Record<
         string,

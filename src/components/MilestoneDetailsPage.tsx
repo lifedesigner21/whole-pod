@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import CreateTaskDialog from "./CreateTaskDialogue";
-import { collection, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  onSnapshot,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -88,8 +94,11 @@ const MilestoneDetailsPage = () => {
       )
     );
 
-    const totalTasks = tasksSnapshot.size;
-    const completedTasks = tasksSnapshot.docs.filter(
+    const visibleTasks = tasksSnapshot.docs.filter(
+      (doc) => doc.data().isDeleted !== true
+    );
+    const totalTasks = visibleTasks.length;
+    const completedTasks = visibleTasks.filter(
       (doc) => doc.data().status === "Completed"
     ).length;
 
@@ -134,10 +143,7 @@ const MilestoneDetailsPage = () => {
           <ArrowLeft className="w-4 h-4 mr-1" />
           Go Back
         </Button>
-        <CreateTaskDialog
-          projectId={projectId!}
-          milestoneId={milestoneId!}
-        />
+        <CreateTaskDialog projectId={projectId!} milestoneId={milestoneId!} />
       </div>
 
       <h2 className="text-2xl font-semibold mb-4">Tasks in this Milestone</h2>

@@ -219,6 +219,7 @@ const CreateMilestoneDialog = forwardRef<
           progress: 0,
           createdAt: Timestamp.now(),
           tasks: [],
+          isDeleted: false, // New field to mark deletion
         };
 
         if (isEdit && form.id) {

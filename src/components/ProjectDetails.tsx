@@ -39,6 +39,7 @@ interface Task {
   estimatedHours: number;
   actualHours: number;
   assignedTo: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 interface ProjectDetailsProps {
@@ -107,7 +108,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
   }, [project.id]);
 
   const completedTasks = tasks.filter(
-    (task) => task.status === "Completed"
+    (task) => task.status === "Completed" && task.isDeleted !== true
   ).length;
 
   return (
@@ -131,10 +132,15 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
                 <span className="text-sm font-medium">Tasks Progress</span>
               </div>
               <p className="text-2xl font-bold">
-                {completedTasks}/{tasks.length}
+                {completedTasks}/
+                {tasks.filter((task) => !task.isDeleted).length}
               </p>
               <Progress
-                value={(completedTasks / (tasks.length || 1)) * 100}
+                value={
+                  (completedTasks /
+                    (tasks.filter((task) => !task.isDeleted).length || 1)) *
+                  100
+                }
                 className="h-2 mt-2"
               />
 
@@ -227,7 +233,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
       </div>
 
       <MilestoneCards
-        project={{ milestones }}
+        project={{ milestones: milestones.filter((m) => m.isDeleted !== true) }}
         projectId={project.id}
         projectName={project.name}
       />

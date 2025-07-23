@@ -59,6 +59,7 @@ interface Task {
   estimatedMinutes?: number;
   completedProof?: string;
   startedAt?: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 interface FilteredTaskListProps {
@@ -106,21 +107,21 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Filter tasks by status and type
-  const completedTasks = tasks.filter((task) => task.status === "Completed");
+  const completedTasks = tasks.filter((task) => task.status === "Completed" && task.isDeleted !== true);
 
   const revisionTasks = tasks.filter(
-    (task) => task.isRevision && task.status !== "Completed"
+    (task) => task.isRevision && task.status !== "Completed" && task.isDeleted !== true
   );
 
   const newTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed")
+    if (!task.createdAt || task.isRevision || task.status === "Completed" ||  task.isDeleted === true )
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate === today;
   });
 
   const pendingTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed")
+    if (!task.createdAt || task.isRevision || task.status === "Completed" || task.isDeleted === true)
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate < today;

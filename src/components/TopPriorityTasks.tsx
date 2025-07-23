@@ -33,6 +33,7 @@ interface Task {
   assignedToName: string;
   projectName?: string;
   milestoneName?: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 const priorityOrder = {
@@ -72,7 +73,9 @@ const TopPriorityTasks = () => {
           .map((doc) => ({ id: doc.id, ...(doc.data() as Task) }))
           .filter(
             (task) =>
-              task.assignedTo === user.uid && task.status !== "Completed"
+              task.assignedTo === user.uid &&
+              task.status !== "Completed" &&
+              task.isDeleted !== true
           );
 
         // Sort by priority
@@ -145,8 +148,12 @@ const TopPriorityTasks = () => {
       )
     );
 
-    const totalTasks = tasksSnapshot.size;
-    const completedTasks = tasksSnapshot.docs.filter(
+    const visibleTasks = tasksSnapshot.docs.filter(
+      (doc) => doc.data().isDeleted !== true
+    );
+
+    const totalTasks = visibleTasks.length;
+    const completedTasks = visibleTasks.filter(
       (doc) => doc.data().status === "Completed"
     ).length;
 
