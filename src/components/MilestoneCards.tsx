@@ -6,6 +6,7 @@ import {
   FileText,
   MessageSquare,
   Pencil,
+  Trash,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate, syncPaidAmountFromInvoice } from "@/lib/utils";
@@ -33,6 +34,9 @@ import {
   orderBy,
   query,
   addDoc,
+  updateDoc,
+  doc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ChatInput from "./ChatInput";
@@ -123,6 +127,23 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
     milestoneDialogRef.current?.openDialog(milestone);
   };
 
+  const handleDeleteMilestone = async (milestoneId: string) => {
+    try {
+      const milestoneRef = doc(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId
+      );
+      await deleteDoc(milestoneRef);
+      onMilestoneCreated()
+      console.log("Milestone deleted successfully");
+    } catch (error) {
+      console.error("Error deleting Milestone:", error);
+    }
+  };
+
   const handleSubmitInvoice = async () => {
     if (!selectedMilestone || !invoiceUrl.trim()) return;
     setIsSubmitting(true);
@@ -206,13 +227,22 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     </span>
 
                     {userRole !== "designer" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditMilestone(milestone)}
-                      >
-                        <Pencil className="w-4 h-4 text-muted-foreground" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditMilestone(milestone)}
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMilestone(milestone.id)}
+                        >
+                          <Trash className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardTitle>
