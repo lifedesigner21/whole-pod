@@ -357,7 +357,7 @@ const AdminDashboard = () => {
                   placeholder="Search projects, clients, or designers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 placeholder:text-xs sm:placeholder:text-sm"
                 />
               </div>
             </div>
