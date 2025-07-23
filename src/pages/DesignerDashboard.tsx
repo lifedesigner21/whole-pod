@@ -97,8 +97,8 @@ const DesignerDashboard = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(),
-      }));
+        ...doc.data() as any,
+      })).filter((project) => project.isDeleted !== true);;
       setDesignerProjects(projects);
     });
     return () => unsubscribe();

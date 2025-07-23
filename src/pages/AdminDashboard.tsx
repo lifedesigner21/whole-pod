@@ -96,7 +96,10 @@ const AdminDashboard = () => {
           where("status", "==", "Completed")
         );
         const snapshot = await getDocs(q);
-        setPendingApprovalCount(snapshot.size); // 👈 Store this in state
+        const filtered = snapshot.docs.filter(
+          (doc) => doc.data().isDeleted !== true
+        );
+        setPendingApprovalCount(filtered.length); // 👈 Store this in state
       } catch (error) {
         console.error("Error fetching pending approvals:", error);
       }
@@ -192,12 +195,15 @@ const AdminDashboard = () => {
     return matchesSearch && matchesStatus && isVisible;
   });
 
-  const totalProjects = projects.filter(project => project.isDeleted !== true).length;
+  const totalProjects = projects.filter(
+    (project) => project.isDeleted !== true
+  ).length;
   const completedProjects = projects.filter(
     (p) => p.status === "Completed" && p.isDeleted !== true
   ).length;
-  const totalRevenue = projects.reduce((sum, p) => sum + p.paidAmount, 0);
-  const pendingRevenue = projects.reduce(
+  const activeProjects = projects.filter((p) => p.isDeleted !== true);
+  const totalRevenue = activeProjects.reduce((sum, p) => sum + p.paidAmount, 0);
+  const pendingRevenue = activeProjects.reduce(
     (sum, p) => sum + (p.totalAmount - p.paidAmount),
     0
   );
@@ -266,7 +272,7 @@ const AdminDashboard = () => {
                   {totalProjects}
                 </p>
               </div>
-              <Briefcase className="w-8 h-8 text-blue-600" />
+              <Briefcase className="w-8 h-8 text-blue-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -280,7 +286,7 @@ const AdminDashboard = () => {
                   {completedProjects}
                 </p>
               </div>
-              <Clock className="w-8 h-8 text-green-600" />
+              <Clock className="w-8 h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -312,7 +318,7 @@ const AdminDashboard = () => {
                   ₹{pendingRevenue.toLocaleString()}
                 </p>
               </div>
-              <Users className="w-8 h-8 text-orange-600" />
+              <Users className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -328,7 +334,7 @@ const AdminDashboard = () => {
                   {unreadCount}
                 </p>
               </div>
-              <MessageCircle className="w-8 h-8 text-orange-600" />
+              <MessageCircle className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -344,7 +350,7 @@ const AdminDashboard = () => {
                   {pendingApprovalCount}
                 </p>
               </div>
-              <CheckCircleIcon className="w-8 h-8 text-orange-600" />
+              <CheckCircleIcon className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>

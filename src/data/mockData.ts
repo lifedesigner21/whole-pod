@@ -22,6 +22,7 @@ export type Project = {
   maxRevisions: number;
   [key: string]: any;
   breif?: string;
+  isDeleted?: boolean;
 };
 
 export interface Milestone {

@@ -320,7 +320,7 @@ const ClientDashboard = () => {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects
-                .filter((project) => project.status === "Completed")
+                .filter((project) => project.status === "Completed" && project.isDeleted !== true)
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
