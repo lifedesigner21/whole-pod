@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Clock,
   Search,
   Plus,
@@ -217,23 +217,27 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Admin Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Complete overview of all projects and operations
           </p>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => {
-              setEditingProject(null); // ensure it's in create mode
+              setEditingProject(null);
               setOpenDialog(true);
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 px-3 py-2 text-sm md:text-base md:px-4 md:py-2"
           >
             <Plus className="w-4 h-4" />
-            Create New Project
+            <span className="hidden sm:inline">Create New Project</span>
+            <span className="inline sm:hidden">New Project</span>
           </Button>
 
           <CreateProjectDialog
@@ -292,7 +296,7 @@ const AdminDashboard = () => {
                   ₹{totalRevenue.toLocaleString()}
                 </p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-600" />
+              <IndianRupee className="w-8 h-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
