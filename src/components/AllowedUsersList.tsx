@@ -72,15 +72,15 @@ const AllowedUsersList = () => {
 
   return (
     <>
-      <Card className="mt-6">
-        <CardContent className="space-y-3">
+      <Card className="mt-6 ">
+        <CardContent className="space-y-3 py-4">
           {users.length === 0 && (
             <p className="text-sm text-gray-500">No users added yet.</p>
           )}
           {users.map((user) => (
             <div
               key={user.id}
-              className="grid grid-cols-5 items-center gap-4 p-3 border rounded"
+              className="grid  md:grid-cols-5 items-center gap-4 p-3 border rounded"
             >
               <span className="text-sm">
                 <b>Name:</b> {user.name}
