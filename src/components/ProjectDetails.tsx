@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -55,21 +55,21 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
 
   const milestoneDialogRef = useRef<CreateMilestoneDialogRef | null>(null);
 
-    const handleMilestoneCreated = async () => {
-      if (!project.id) return;
-      try {
-        const snapshot = await getDocs(
-          collection(db, "projects", project.id, "milestones")
-        );
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setMilestones(data);
-      } catch (err) {
-        console.error("Error fetching milestones:", err);
-      }
-    };
+  const handleMilestoneCreated = async () => {
+    if (!project.id) return;
+    try {
+      const snapshot = await getDocs(
+        collection(db, "projects", project.id, "milestones")
+      );
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMilestones(data);
+    } catch (err) {
+      console.error("Error fetching milestones:", err);
+    }
+  };
 
   useEffect(() => {
     const q = query(
@@ -263,3 +263,46 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
 };
 
 export default ProjectDetails;
+
+{
+  /* Tasks List */
+}
+{
+  /* <Card>
+        <CardHeader className="flex items-center justify-between"></CardHeader>
+        <CardContent>
+          <KanbanTasks projectId={project.id} />
+        </CardContent>
+      </Card> */
+}
+
+{
+  /* Quick Actions */
+}
+{
+  /* <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="p-4 h-auto flex-col">
+              <FileText className="w-6 h-6 mb-2 text-blue-600" />
+              <span className="text-sm font-medium">Project Files</span>
+            </Button>
+            <Button variant="outline" className="p-4 h-auto flex-col">
+              <MessageSquare className="w-6 h-6 mb-2 text-green-600" />
+              <span className="text-sm font-medium">Client Messages</span>
+            </Button>
+            <Button variant="outline" className="p-4 h-auto flex-col">
+              <Clock className="w-6 h-6 mb-2 text-orange-600" />
+              <span className="text-sm font-medium">Time Tracker</span>
+            </Button>
+            <Button variant="outline" className="p-4 h-auto flex-col">
+              <AlertCircle className="w-6 h-6 mb-2 text-red-600" />
+              <span className="text-sm font-medium">Report Issue</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card> */
+}
