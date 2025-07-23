@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Clock,
   Search,
   Plus,
@@ -292,7 +292,7 @@ const AdminDashboard = () => {
                   ₹{totalRevenue.toLocaleString()}
                 </p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-600" />
+              <IndianRupee className="w-8 h-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
