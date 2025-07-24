@@ -15,17 +15,6 @@ import TaskList from "./TaskLIstAdminPortal";
 import Breadcrumb from "./BreadCrumb";
 import { useLocation } from "react-router-dom";
 
-interface Subtask {
-  name: string;
-  brief: string;
-  estimatedHours: number;
-  startDate: string;
-  endDate: string;
-  designerId: string;
-  status?: string;
-  designerName?: string;
-}
-
 interface Task {
   id: string;
   title: string;
@@ -44,6 +33,7 @@ interface Task {
   revisionReasons?: string[];
   estimatedMinutes?: number;
   completedProof?: string;
+  isDeleted?: boolean;
 }
 
 const MilestoneDetailsPage = () => {
@@ -71,7 +61,7 @@ const MilestoneDetailsPage = () => {
       setTasks(taskList);
     });
 
-    return () => unsubscribe(); // clean up the listener
+    return () => unsubscribe();
   }, [projectId, milestoneId]);
 
   const updateStatus = async (taskId: string, newStatus: string) => {
@@ -89,52 +79,70 @@ const MilestoneDetailsPage = () => {
       updateData.isRevision = false;
     }
 
-    await updateDoc(taskRef, updateData);
+    try {
+      await updateDoc(taskRef, updateData);
 
-    const tasksSnapshot = await getDocs(
-      collection(
+      // Update milestone progress
+      const tasksSnapshot = await getDocs(
+        collection(
+          db,
+          `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
+        )
+      );
+
+      const visibleTasks = tasksSnapshot.docs.filter(
+        (doc) => doc.data().isDeleted !== true
+      );
+      const totalTasks = visibleTasks.length;
+      const completedTasks = visibleTasks.filter(
+        (doc) => doc.data().status === "Completed"
+      ).length;
+
+      const progress =
+        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      const milestoneRef = doc(
         db,
-        `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
-      )
-    );
+        `projects/${task.projectId}/milestones/${task.milestoneId}`
+      );
+      await updateDoc(milestoneRef, { progress });
 
-    const visibleTasks = tasksSnapshot.docs.filter(
-      (doc) => doc.data().isDeleted !== true
-    );
-    const totalTasks = visibleTasks.length;
-    const completedTasks = visibleTasks.filter(
-      (doc) => doc.data().status === "Completed"
-    ).length;
+      console.log(
+        `✅ Milestone progress updated to ${progress}% (${completedTasks}/${totalTasks} tasks completed)`
+      );
 
-    const progress =
-      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-    const milestoneRef = doc(
-      db,
-      `projects/${task.projectId}/milestones/${task.milestoneId}`
-    );
-    await updateDoc(milestoneRef, { progress });
-
-    console.log(
-      `✅ Milestone progress updated to ${progress}% (${completedTasks}/${totalTasks} tasks completed)`
-    );
-
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+      // ✅ FIXED: Update local state immediately to prevent flickering
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId ? { ...t, status: newStatus } : t
+        )
+      );
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
   };
 
+  // ✅ FIXED: Simplified task update handler
   const handleTaskUpdate = (updatedTask: Task) => {
-    setTasks((prev) =>
-      prev.map((task) =>
+    console.log("🔄 Updating task in parent:", updatedTask.id, updatedTask.title);
+    
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
         task.id === updatedTask.id ? { ...task, ...updatedTask } : task
       )
     );
-    setTaskToEdit(null); // ✅ close edit dialog
   };
 
+  // ✅ FIXED: Simplified edit task handler
   const handleEditTask = (task: Task) => {
-    setTaskToEdit(task); // ✅ open edit dialog with task data
+    console.log("✏️ Opening edit dialog for task:", task.id, task.title);
+    setTaskToEdit(task);
+  };
+
+  // ✅ FIXED: Handle task creation/update completion
+  const handleTaskCreatedOrUpdated = () => {
+    console.log("✅ Task operation completed, closing dialog");
+    setTaskToEdit(null);
   };
 
   return (
@@ -147,7 +155,11 @@ const MilestoneDetailsPage = () => {
           <ArrowLeft className="w-4 h-4 mr-1" />
           Go Back
         </Button>
-        <CreateTaskDialog projectId={projectId!} milestoneId={milestoneId!} />
+        <CreateTaskDialog 
+          projectId={projectId!} 
+          milestoneId={milestoneId!}
+          onTaskCreated={handleTaskCreatedOrUpdated}
+        />
       </div>
 
       <h2 className="text-2xl font-semibold mb-4">Tasks in this Milestone</h2>
@@ -167,22 +179,20 @@ const MilestoneDetailsPage = () => {
           openPopoverId={openPopoverId}
           setOpenPopoverId={setOpenPopoverId}
           onStatusChange={updateStatus}
-          onTaskUpdate={handleTaskUpdate}
-          onEditTask={handleEditTask} // ✅ pass edit handler
+          onTaskUpdate={handleTaskUpdate} // ✅ Pass the simplified handler
+          onEditTask={handleEditTask} // ✅ Pass the edit handler
           projectId={projectId!}
           milestoneId={milestoneId!}
         />
       )}
 
-      {/* ✅ Hidden Dialog instance only for editing */}
+      {/* ✅ FIXED: Single dialog instance for editing only */}
       {taskToEdit && (
         <CreateTaskDialog
           projectId={projectId!}
           milestoneId={milestoneId!}
           taskToEdit={taskToEdit}
-          onTaskUpdated={() => {
-            setTaskToEdit(null);
-          }}
+          onTaskUpdated={handleTaskCreatedOrUpdated} // ✅ Close dialog after update
         />
       )}
     </div>

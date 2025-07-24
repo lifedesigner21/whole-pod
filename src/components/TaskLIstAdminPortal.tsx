@@ -39,7 +39,6 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import CreateTaskDialog from "./CreateTaskDialogue";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -70,7 +69,7 @@ interface Task {
   milestoneName?: string;
   isApproved?: boolean;
   assignedTo?: string;
-  isDeleted?: boolean; // New field to mark deletion
+  isDeleted?: boolean;
 }
 
 interface TaskListProps {
@@ -116,9 +115,6 @@ const TaskList: React.FC<TaskListProps> = ({
     chatTarget
   );
 
-  // State for edit dialog
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [runningTimers, setRunningTimers] = useState<Record<string, boolean>>(
     {}
@@ -141,7 +137,7 @@ const TaskList: React.FC<TaskListProps> = ({
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const visibleTasks = tasks.filter((task) => task.isDeleted !== true); // show only not-deleted
+    const visibleTasks = tasks.filter((task) => task.isDeleted !== true);
     const assigned =
       userRole === "designer"
         ? visibleTasks.filter(
@@ -180,7 +176,6 @@ const TaskList: React.FC<TaskListProps> = ({
             updated[taskId] = (updated[taskId] || 0) + 1;
             hasRunningTimer = true;
 
-            // Log every 10 seconds to avoid spam
             if (updated[taskId] % 10 === 0) {
               console.log(
                 `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
@@ -223,12 +218,12 @@ const TaskList: React.FC<TaskListProps> = ({
       endOfMessagesRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, openChat]);
+
   useEffect(() => {
     if (openChat) {
-      // Wait for the DOM to finish rendering messages
       setTimeout(() => {
         endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100); // slight delay ensures scroll happens after messages are in DOM
+      }, 100);
     }
   }, [openChat]);
 
@@ -253,19 +248,21 @@ const TaskList: React.FC<TaskListProps> = ({
       );
       await updateDoc(taskRef, { isDeleted: true });
       console.log("Task deleted successfully");
+      
+      // Update local state immediately to reflect the change
+      const updatedTask = tasks.find(t => t.id === taskId);
+      if (updatedTask) {
+        onTaskUpdate({ ...updatedTask, isDeleted: true });
+      }
     } catch (error) {
       console.error("Error deleting task:", error);
     }
   };
 
+  // ✅ FIXED: Remove the local task editing logic and dialog
+  // Just call the parent's onEditTask function
   const handleEditTask = (task: Task) => {
-    setTaskToEdit(task);
-  };
-
-  const handleTaskUpdated = () => {
-    setTaskToEdit(null);
-    // Refresh the task list or trigger a re-fetch
-    onTaskUpdate(taskToEdit!);
+    onEditTask(task); // This will be handled by the parent component
   };
 
   const handleStart = (taskId: string) => {
@@ -318,14 +315,13 @@ const TaskList: React.FC<TaskListProps> = ({
     };
 
     console.log("🔄 HOLD: Updating database with:", updateData);
-    console.log(
-      "🔄 HOLD: Database path:",
-      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-    );
 
     try {
       await updateDoc(taskRef, updateData);
       console.log("✅ HOLD: Database updated successfully");
+      
+      // Update local state
+      onTaskUpdate({ ...task, ...updateData });
     } catch (error) {
       console.error("❌ HOLD: Database update failed:", error);
     }
@@ -341,8 +337,6 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const confirmComplete = async () => {
     console.log("🎯 COMPLETE: Starting confirmComplete process");
-    console.log("🎯 COMPLETE: showCompleteDialogFor:", showCompleteDialogFor);
-    console.log("🎯 COMPLETE: proofUrl:", proofUrl);
 
     if (!showCompleteDialogFor || !proofUrl.trim()) {
       console.log(
@@ -352,7 +346,6 @@ const TaskList: React.FC<TaskListProps> = ({
     }
 
     setRunningTimers((prev) => ({ ...prev, [showCompleteDialogFor]: false }));
-    console.log("🎯 COMPLETE: Timer stopped for task:", showCompleteDialogFor);
 
     const task = tasks.find((t) => t.id === showCompleteDialogFor);
     if (!task) {
@@ -363,15 +356,8 @@ const TaskList: React.FC<TaskListProps> = ({
       return;
     }
 
-    console.log("🎯 COMPLETE: Found task:", task.title);
-
     const totalSeconds = timers[showCompleteDialogFor] || 0;
     const totalMinutes = Math.floor(totalSeconds / 60);
-
-    console.log("🎯 COMPLETE: Time calculation:");
-    console.log("  - Total seconds:", totalSeconds);
-    console.log("  - Total minutes:", totalMinutes);
-    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
 
     const taskRef = doc(
       db,
@@ -384,24 +370,11 @@ const TaskList: React.FC<TaskListProps> = ({
       completedProof: proofUrl.trim(),
     };
 
-    console.log("🎯 COMPLETE: Updating task with:", updateData);
-    console.log(
-      "🎯 COMPLETE: Database path:",
-      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-    );
-
     try {
       await updateDoc(taskRef, updateData);
       console.log("✅ COMPLETE: Task updated successfully");
-    } catch (error) {
-      console.error("❌ COMPLETE: Task update failed:", error);
-    }
 
-    console.log(
-      "🎯 COMPLETE: Fetching tasks for milestone progress calculation..."
-    );
-
-    try {
+      // Update milestone progress
       const tasksSnapshot = await getDocs(
         collection(
           db,
@@ -418,35 +391,25 @@ const TaskList: React.FC<TaskListProps> = ({
         (doc) => doc.data().status === "Completed"
       ).length;
 
-      console.log("🎯 COMPLETE: Progress calculation:");
-      console.log("  - Total tasks:", totalTasks);
-      console.log("  - Completed tasks:", completedTasks);
-
       const progress =
         totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-      console.log("  - Calculated progress:", progress + "%");
 
       const milestoneRef = doc(
         db,
         `projects/${task.projectId}/milestones/${task.milestoneId}`
       );
 
-      console.log("🎯 COMPLETE: Updating milestone progress...");
-      console.log(
-        "🎯 COMPLETE: Milestone path:",
-        `projects/${task.projectId}/milestones/${task.milestoneId}`
-      );
-
       await updateDoc(milestoneRef, { progress });
       console.log("✅ COMPLETE: Milestone progress updated successfully");
+      
+      // Update local state
+      onTaskUpdate({ ...task, ...updateData });
     } catch (error) {
-      console.error("❌ COMPLETE: Milestone update failed:", error);
+      console.error("❌ COMPLETE: Task update failed:", error);
     }
 
     setProofUrl("");
     setShowCompleteDialogFor(null);
-    console.log("🎯 COMPLETE: Process completed, dialog closed");
   };
 
   const getPriorityColor = (priority: string) => {
@@ -486,10 +449,12 @@ const TaskList: React.FC<TaskListProps> = ({
     inProgress: filteredTasks.filter((t) => t.status === "In Progress"),
     completed: filteredTasks.filter((t) => t.status === "Completed"),
   };
+
   const handleEdit = (msg: any) => {
     setEditMsgId(msg.id);
     setEditContent(msg.content);
   };
+
   const handleSaveEdit = async () => {
     if (!projectId || !milestoneId || !selectedTask || !editMsgId) return;
 
@@ -544,7 +509,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 {userRole === "admin" && (
                   <div className="flex items-center justify-end gap-2">
                     <Pencil
-                      className="w-4 h-4 text-yellow-600 cursor-pointer hover:yellow-blue-800"
+                      className="w-4 h-4 text-yellow-600 cursor-pointer hover:text-yellow-800"
                       onClick={() => handleEditTask(task)}
                     />
                     <Trash
@@ -578,7 +543,6 @@ const TaskList: React.FC<TaskListProps> = ({
                   <Clock className="w-4 h-4" />
                   <span>Time Taken: {task.actualMinutes} Mins</span>
                 </div>
-                {/* Show last revision reason if exists */}
                 {task.isRevision && task.revisionReasons?.length > 0 && (
                   <div className="text-sm text-red-600 mt-2">
                     <span className="font-semibold">Revision Requested:</span>{" "}
@@ -671,44 +635,6 @@ const TaskList: React.FC<TaskListProps> = ({
                     </>
                   )}
 
-                  {/* {userRole === "admin" && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={async () => {
-                          const taskRef = doc(
-                            db,
-                            `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-                          );
-                          try {
-                            await updateDoc(taskRef, {
-                              isApproved: true,
-                              isRevision: false,
-                            });
-                            console.log("✅ APPROVED: Task updated");
-                          } catch (err) {
-                            console.error("❌ APPROVED: Failed to update", err);
-                          }
-                        }}
-                        variant="outline"
-                        className="border border-green-500 text-green-500 hover:text-green-600"
-                        disabled={task.isApproved}
-                      >
-                        {task.isApproved ? "Approved" : "Approve"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setShowRevisionDialog(true);
-                        }}
-                      >
-                        Request Revision
-                      </Button>
-                    </>
-                  )} */}
-
                   {userRole === "admin" && (
                     <>
                       <Button
@@ -720,15 +646,44 @@ const TaskList: React.FC<TaskListProps> = ({
                           );
 
                           try {
-                            // ✅ 1. Update task status
-                            await updateDoc(taskRef, {
+                            const updateData = {
                               isApproved: true,
                               isRevision: false,
                               status: "Completed",
-                            });
+                            };
+                            
+                            await updateDoc(taskRef, updateData);
                             console.log("✅ APPROVED: Task updated");
 
-                            // ✅ 2. Send notification to designer
+                            // Update milestone progress
+                            const tasksSnapshot = await getDocs(
+                              collection(
+                                db,
+                                `projects/${task.projectId}/milestones/${task.milestoneId}/tasks`
+                              )
+                            );
+                            const visibleTasks = tasksSnapshot.docs.filter(
+                              (doc) => doc.data().isDeleted !== true
+                            );
+                            const totalTasks = visibleTasks.length;
+                            const completedTasks = visibleTasks.filter(
+                              (doc) => doc.data().status === "Completed"
+                            ).length;
+
+                            const progress =
+                              totalTasks > 0
+                                ? Math.round(
+                                    (completedTasks / totalTasks) * 100
+                                  )
+                                : 0;
+
+                            const milestoneRef = doc(
+                              db,
+                              `projects/${task.projectId}/milestones/${task.milestoneId}`
+                            );
+                            await updateDoc(milestoneRef, { progress });
+
+                            // Send notification
                             const notificationRef = doc(
                               collection(
                                 db,
@@ -745,7 +700,9 @@ const TaskList: React.FC<TaskListProps> = ({
                               read: false,
                               createdAt: new Date(),
                             });
-                            console.log("✅ Notification sent for approval");
+                            
+                            // Update local state
+                            onTaskUpdate({ ...task, ...updateData });
                           } catch (err) {
                             console.error(
                               "❌ APPROVED: Failed to update or notify",
@@ -768,7 +725,6 @@ const TaskList: React.FC<TaskListProps> = ({
                             setSelectedTask(task);
                             setShowRevisionDialog(true);
 
-                            // ✅ Send notification for revision request
                             const notificationRef = doc(
                               collection(
                                 db,
@@ -785,7 +741,6 @@ const TaskList: React.FC<TaskListProps> = ({
                               read: false,
                               createdAt: new Date(),
                             });
-                            console.log("✅ Notification sent for revision");
                           } catch (err) {
                             console.error(
                               "❌ REVISION: Failed to send notification",
@@ -839,16 +794,6 @@ const TaskList: React.FC<TaskListProps> = ({
       {renderSection("🟡 Pending Tasks", grouped.pending)}
       {renderSection("🟠 In Progress Tasks", grouped.inProgress)}
       {renderSection("✅ Completed Tasks", grouped.completed)}
-
-      {/* Edit Task Dialog */}
-      {taskToEdit && (
-        <CreateTaskDialog
-          projectId={projectId}
-          milestoneId={milestoneId}
-          onTaskUpdated={handleTaskUpdated}
-          taskToEdit={taskToEdit}
-        />
-      )}
 
       <Sheet open={openChat} onOpenChange={setOpenChat}>
         <SheetContent side="right" className="w-full max-w-md p-6">
@@ -926,7 +871,6 @@ const TaskList: React.FC<TaskListProps> = ({
                         )}
                       </div>
 
-                      {/* chat bubble */}
                       <div
                         className={`w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
@@ -1073,7 +1017,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 );
 
                 try {
-                  await updateDoc(taskRef, {
+                  const updateData = {
                     isRevision: true,
                     isApproved: false,
                     status: "In Revision",
@@ -1081,8 +1025,13 @@ const TaskList: React.FC<TaskListProps> = ({
                       ...(selectedTask.revisionReasons || []),
                       revisionReason.trim(),
                     ],
-                  });
+                  };
+                  
+                  await updateDoc(taskRef, updateData);
                   console.log("✅ REVISION: Task updated", revisionReason);
+                  
+                  // Update local state
+                  onTaskUpdate({ ...selectedTask, ...updateData });
                 } catch (err) {
                   console.error("❌ REVISION: Failed to update", err);
                 }

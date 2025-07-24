@@ -41,7 +41,7 @@ interface Task {
   actualMinutes: number;
   priority: string;
   status: string;
-  isDeleted ?: boolean; // New field to mark deletion
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 const DesignerDashboard = () => {
@@ -95,10 +95,12 @@ const DesignerDashboard = () => {
       where("designerId", "==", user.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projects = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data() as any,
-      })).filter((project) => project.isDeleted !== true);;
+      const projects = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as any),
+        }))
+        .filter((project) => project.isDeleted !== true);
       setDesignerProjects(projects);
     });
     return () => unsubscribe();
@@ -119,8 +121,12 @@ const DesignerDashboard = () => {
 
       const newTasks = tasks.filter((task) => {
         if (!task.createdAt || task.isDeleted === true) return false;
+
         const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
-        return createdDate === today;
+        const isCreatedToday = createdDate === today;
+        const isNotCompleted = task.status.toLowerCase() !== "completed";
+
+        return isCreatedToday && isNotCompleted;
       });
 
       const pending = tasks.filter(
@@ -143,7 +149,9 @@ const DesignerDashboard = () => {
     const unsubscribe = onSnapshot(collectionGroup(db, "tasks"), (snapshot) => {
       const allTasks = snapshot.docs
         .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
-        .filter((task) => task.assignedTo === user.uid && task.isDeleted !== true);
+        .filter(
+          (task) => task.assignedTo === user.uid && task.isDeleted !== true
+        );
 
       const history: Record<
         string,

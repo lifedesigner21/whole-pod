@@ -163,14 +163,14 @@ const ClientDashboard = () => {
             <p className="text-sm text-gray-600">Completed Projects</p>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardContent className="p-6 text-center">
             <p className="text-2xl font-bold text-yellow-600">
               {pendingApprovals}
             </p>
             <p className="text-sm text-gray-600">Pending Approvals</p>
           </CardContent>
-        </Card>
+        </Card> */}
         <Card className="hidden">
           <CardContent className=" p-6 text-center">
             <p className="text-2xl font-bold text-red-600">{unpaidInvoices}</p>
@@ -320,7 +320,10 @@ const ClientDashboard = () => {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects
-                .filter((project) => project.status === "Completed" && project.isDeleted !== true)
+                .filter(
+                  (project) =>
+                    project.status === "Completed" && project.isDeleted !== true
+                )
                 .map((project) => (
                   <ProjectCard
                     key={project.id}
