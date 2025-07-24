@@ -39,11 +39,11 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import ChatInput from "./ChatInput";
 import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "./CreateMilestoneDialog";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumb from "./BreadCrumb";
 
 interface Subtask {
   title: string;
@@ -213,8 +213,15 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
     return <p className="text-gray-500 mt-4">No milestones added yet.</p>;
   }
 
+
   return (
     <>
+      <Breadcrumb
+        paths={[
+          { name: projectName||"Unnamed Project" },
+          {name:"Milestones"}
+        ]}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {project.milestones.map((milestone) => {
           const isChatOpen = openChatId === milestone.id;
@@ -296,7 +303,13 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     className="flex-1"
                     onClick={() =>
                       navigate(
-                        `/project/${projectId}/milestone/${milestone.id}`
+                        `/project/${projectId}/milestone/${milestone.id}`,
+                        {
+                          state: {
+                            milestoneName: milestone.name,
+                            projectName: projectName,
+                          },
+                        }
                       )
                     }
                   >

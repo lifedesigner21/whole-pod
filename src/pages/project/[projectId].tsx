@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import MilestoneCard from "@/components/MilestoneCard";
+import Breadcrumb from "@/components/BreadCrumb";
 
 const ProjectDetailPage = () => {
     const navigate = useNavigate();
@@ -107,6 +108,12 @@ const ProjectDetailPage = () => {
           Back
         </Button>
 
+        <Breadcrumb
+          paths={[
+            { name: project.name, },
+            { name: "Milestones" },
+          ]}
+        />
         <div className="mx-auto flex flex-col items-center">
           <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
           <p className="text-sm text-gray-500 mt-1 ">
@@ -172,7 +179,6 @@ const ProjectDetailPage = () => {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 };

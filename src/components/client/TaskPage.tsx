@@ -34,6 +34,7 @@ import ChatInput from "@/components/ChatInput";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import Breadcrumb from "../BreadCrumb";
 
 interface Task {
   id: string;
@@ -66,40 +67,58 @@ const TasksPage: React.FC = () => {
   const [designerUid, setDesignerUid] = useState<string | null>(null);
   const navigate = useNavigate();
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  const [projectName,setProjectName] = useState<string | null>(null)
+  const [milestoneName, setMilestoneName] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!projectId || !milestoneId) return;
+useEffect(() => {
+  const fetchData = async () => {
+    if (!projectId || !milestoneId) return;
 
-      const projectRef = doc(db, "projects", projectId);
-      const projectSnap = await getDoc(projectRef);
+    // Fetch Project
+    const projectRef = doc(db, "projects", projectId);
+    const projectSnap = await getDoc(projectRef);
+    if (projectSnap.exists()) {
+      const projectData = projectSnap.data();
+      setProjectName(projectData.name);
+      setClientUid(projectData.clientId || null);
+      setDesignerUid(projectData.designerId || null);
+    }
 
-      if (projectSnap.exists()) {
-        const projectData = projectSnap.data();
-        setClientUid(projectData.clientId || null);
-        setDesignerUid(projectData.designerId || null);
-      } else {
-        console.warn("⚠️ Project not found");
-      }
+    // Fetch Milestone
+    const milestoneRef = doc(
+      db,
+      "projects",
+      projectId,
+      "milestones",
+      milestoneId
+    );
+    const milestoneSnap = await getDoc(milestoneRef);
+    if (milestoneSnap.exists()) {
+      const milestoneData = milestoneSnap.data();
+      setMilestoneName(milestoneData.name);
+    }
 
-      const tasksRef = collection(
-        db,
-        "projects",
-        projectId,
-        "milestones",
-        milestoneId,
-        "tasks"
-      );
-      const snapshot = await getDocs(tasksRef);
-      const taskList: Task[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Task),
-      }));
-      setTasks(taskList);
-    };
+    // Fetch Tasks
+    const tasksRef = collection(
+      db,
+      "projects",
+      projectId,
+      "milestones",
+      milestoneId,
+      "tasks"
+    );
+    const snapshot = await getDocs(tasksRef);
+    const taskList: Task[] = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Task),
+    }));
+    setTasks(taskList);
+  };
 
-    fetchData();
-  }, [projectId, milestoneId]);
+  fetchData();
+}, [projectId, milestoneId]);
+
+
 
   const handleOpenChat = (
     task: Task,
@@ -140,6 +159,7 @@ const TasksPage: React.FC = () => {
     setEditContent("");
   };
 
+
   const handleDelete = async (id: string) => {
     if (!projectId || !milestoneId || !selectedTask) return;
 
@@ -172,6 +192,7 @@ const TasksPage: React.FC = () => {
     }
   }, [openChat]);
 
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <Button
@@ -182,6 +203,13 @@ const TasksPage: React.FC = () => {
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back
       </Button>
+      <Breadcrumb
+        paths={[
+          { name: projectName,},
+          { name: milestoneName || "Milestone" },
+          {name:"Tasks"}
+        ]}
+      />
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>

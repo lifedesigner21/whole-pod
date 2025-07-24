@@ -12,6 +12,8 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import TaskList from "./TaskLIstAdminPortal";
+import Breadcrumb from "./BreadCrumb";
+import { useLocation } from "react-router-dom";
 
 interface Subtask {
   name: string;
@@ -49,7 +51,9 @@ const MilestoneDetailsPage = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null); // ✅ for editing
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null); 
+  const location = useLocation();
+  const { milestoneName, projectName } = location.state || {};
 
   useEffect(() => {
     if (!projectId || !milestoneId) return;
@@ -147,6 +151,13 @@ const MilestoneDetailsPage = () => {
       </div>
 
       <h2 className="text-2xl font-semibold mb-4">Tasks in this Milestone</h2>
+      <Breadcrumb
+        paths={[
+          { name: projectName || "Project" },
+          { name: milestoneName || "Milestone" },
+          {name:"Tasks"}
+        ]}
+      />
 
       {tasks.length === 0 ? (
         <p className="text-gray-500">No tasks available.</p>
