@@ -91,7 +91,7 @@ const AdminProjectDetails = () => {
       />
 
       <h2 className="text-xl font-semibold">Project: {project.name}</h2>
-      <p className="text-sm text-gray-600">{project.brief}</p>
+      {/* <p className="text-sm text-gray-600">{project.brief}</p> */}
 
       {/* Milestone Cards */}
       <MilestoneCards
