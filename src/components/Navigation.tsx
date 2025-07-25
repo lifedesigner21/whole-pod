@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Bell, CheckCircle, LogOut, User } from "lucide-react";
+import {
+  Bell,
+  CheckCircle,
+  Group,
+  IndianRupeeIcon,
+  LogOut,
+  User,
+  Users,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,8 +82,10 @@ const Navigation = () => {
 
   const getTimeAgo = (createdAt: any) => {
     if (!createdAt) return "";
-    
-    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt.seconds * 1000);
+
+    const date = createdAt.toDate
+      ? createdAt.toDate()
+      : new Date(createdAt.seconds * 1000);
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime();
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
@@ -90,6 +100,8 @@ const Navigation = () => {
   };
 
   const handleProfileClick = () => navigate("/profile");
+  const handlePaymentClick = () => navigate("/payments");
+  const handleUsersClick = () => navigate("/usersList");
 
   const handleSignOut = async () => {
     try {
@@ -170,10 +182,16 @@ const Navigation = () => {
                     className={!n.read ? "bg-gray-100" : ""}
                   >
                     <div className="flex items-start w-full">
-                      <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0 mt-0.5" />
+                      {n.type === "chat" ? (
+                        <Bell className="w-4 h-4 mr-2 text-blue-500 mt-0.5" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 mr-2 text-green-500 mt-0.5" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm">{n.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{getTimeAgo(n.createdAt)}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {getTimeAgo(n.createdAt)}
+                        </p>
                       </div>
                     </div>
                   </DropdownMenuItem>
@@ -212,15 +230,25 @@ const Navigation = () => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {userRole === "admin" && (
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setIsDialogOpen(true);
-                    }}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Add User</span>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Add User</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleUsersClick}>
+                      <Group className="mr-2 h-4 w-4" />
+                      <span>Users</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlePaymentClick}>
+                      <IndianRupeeIcon className="mr-2 h-4 w-4" />
+                      <span>Payments and Invoices</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <AddUserDialog
                   open={isDialogOpen}

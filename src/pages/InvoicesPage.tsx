@@ -1,52 +1,77 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  DocumentData,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 interface Invoice {
   id: string;
-  amount: number;
+  userId: string;
+  pendingAmount: number;
   createdAt: string;
   milestoneId: string;
   milestoneName: string;
   projectId: string;
   projectName: string;
   url: string;
+  status: "Paid" | "Pending";
 }
 
 const InvoicesPage = () => {
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-   const navigate = useNavigate();
+  const [totalPending, setTotalPending] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user?.uid) return;
+
     const fetchInvoices = async () => {
       const ref = query(
         collection(db, "invoiceUrls"),
+        where("clientId", "==", user.uid),
         orderBy("createdAt", "desc")
       );
+
       const snapshot = await getDocs(ref);
-      const result: Invoice[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Invoice, "id">),
-      }));
+
+      const result: Invoice[] = snapshot.docs.map((doc) => {
+        const data = doc.data() as Partial<Invoice>;
+        const pending =
+          typeof data.pendingAmount === "number" ? data.pendingAmount : 0;
+        const status = data.status === "Paid" ? "Paid" : "Pending";
+
+        return {
+          id: doc.id,
+          userId: data.userId || "",
+          pendingAmount: pending,
+          createdAt: data.createdAt || "",
+          milestoneId: data.milestoneId || "",
+          milestoneName: data.milestoneName || "",
+          projectId: data.projectId || "",
+          projectName: data.projectName || "",
+          url: data.url || "#",
+          status,
+        };
+      });
+
+      // Calculate total pending only for status === "Pending"
+      const totalPendingAmount = result
+        .filter((inv) => inv.status === "Pending")
+        .reduce((acc, inv) => acc + inv.pendingAmount, 0);
+
       setInvoices(result);
+      setTotalPending(totalPendingAmount);
     };
 
     fetchInvoices();
-  }, []);
-
-  const totalPaid = invoices.reduce((acc, inv) => acc + inv.amount, 0);
+  }, [user?.uid]);
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -59,37 +84,11 @@ const InvoicesPage = () => {
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back
       </Button>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Payment History</h1>
       </div>
 
-      {/* Summary Cards */}
-      <div className="hidden grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xl font-bold text-black">
-              ₹{totalPaid.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-600">Total Paid</p>
-          </CardContent>
-        </Card>
-
-        {/* You can enhance these with real-time "pending" and "overdue" states if you have them */}
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xl font-bold text-black">-</p>
-            <p className="text-sm text-gray-600">Pending Invoices</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-xl font-bold text-black">-</p>
-            <p className="text-sm text-gray-600">Overdue Count</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Table of Invoices */}
       <Card>
         <CardContent className="overflow-x-auto">
           <h2 className="text-xl font-semibold mb-4">Invoices & Payments</h2>
@@ -98,7 +97,8 @@ const InvoicesPage = () => {
               <tr>
                 <th className="p-3">Project</th>
                 <th className="p-3">Milestone</th>
-                <th className="p-3">Amount</th>
+                <th className="p-3">Pending Amount</th>
+                <th className="p-3">Status</th>
                 <th className="p-3">File Link</th>
               </tr>
             </thead>
@@ -108,10 +108,18 @@ const InvoicesPage = () => {
                   <td className="p-3">{invoice.projectName}</td>
                   <td className="p-3">{invoice.milestoneName}</td>
                   <td className="p-3">
-                    ₹
-                    {typeof invoice.amount === "number"
-                      ? invoice.amount.toLocaleString()
-                      : "0"}
+                    ₹{invoice.pendingAmount.toLocaleString()}
+                  </td>
+                  <td className="p-3">
+                    <Badge
+                      className={
+                        invoice.status === "Paid"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }
+                    >
+                      {invoice.status}
+                    </Badge>
                   </td>
                   <td className="p-3">
                     <a
@@ -125,6 +133,15 @@ const InvoicesPage = () => {
                   </td>
                 </tr>
               ))}
+
+              {/* Footer row for total pending */}
+              <tr className="border-t bg-gray-50 font-semibold">
+                <td className="p-3" colSpan={2}>
+                  Total Pending Amount
+                </td>
+                <td className="p-3">₹{totalPending.toLocaleString()}</td>
+                <td className="p-3" colSpan={2}></td>
+              </tr>
             </tbody>
           </table>
         </CardContent>

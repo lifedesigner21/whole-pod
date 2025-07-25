@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Users,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Clock,
   Search,
   Plus,
@@ -96,7 +96,10 @@ const AdminDashboard = () => {
           where("status", "==", "Completed")
         );
         const snapshot = await getDocs(q);
-        setPendingApprovalCount(snapshot.size); // 👈 Store this in state
+        const filtered = snapshot.docs.filter(
+          (doc) => doc.data().isDeleted !== true
+        );
+        setPendingApprovalCount(filtered.length); // 👈 Store this in state
       } catch (error) {
         console.error("Error fetching pending approvals:", error);
       }
@@ -109,16 +112,87 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const q = query(collection(db, "projects"), orderBy("createdDate", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const projList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const projList = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const projectData = doc.data() as Project; // ✅ ADD THIS TYPE ASSERTION
+          const milestonesSnap = await getDocs(
+            collection(db, `projects/${doc.id}/milestones`)
+          );
+
+          const milestones = milestonesSnap.docs
+            .map((d) => d.data())
+            .filter((m) => m.isDeleted !== true);
+
+          const total = milestones.length;
+          const completed = milestones.filter((m) => m.progress === 100).length;
+
+          const projectProgress =
+            total > 0 ? Math.round((completed / total) * 100) : 0;
+
+          if (projectProgress === 100 && projectData.status !== "Completed") {
+            await updateDoc(doc.ref, {
+              status: "Completed",
+              progress: 100,
+            });
+          } else if (
+            projectProgress < 100 &&
+            projectData.status === "Completed"
+          ) {
+            await updateDoc(doc.ref, {
+              status: "Active",
+              progress: projectProgress, 
+            });
+          } else if (projectProgress !== projectData.progress) {
+            await updateDoc(doc.ref, {
+              progress: projectProgress,
+            });
+          }
+
+
+
+          return {
+            ...projectData,
+            id: doc.id,
+            progress: projectProgress,
+          };
+        })
+      );
       setProjects(projList);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // useEffect(() => {
+  //   const q = query(collection(db, "projects"), orderBy("createdDate", "desc"));
+  //   const unsubscribe = onSnapshot(q, async (snapshot) => {
+  //     const projList = await Promise.all(
+  //       snapshot.docs.map(async (doc) => {
+  //         const projectData = { id: doc.id, ...doc.data() };
+
+  //         const milestonesSnap = await getDocs(
+  //           collection(db, `projects/${doc.id}/milestones`)
+  //         );
+
+  //         const milestones = milestonesSnap.docs.map((d) => d.data()).filter((m) => m.isDeleted !== true);
+  //         const total = milestones.length;
+  //         const completed = milestones.filter((m) => m.progress === 100).length;
+
+  //         const projectProgress =
+  //           total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  //         return {
+  //           ...projectData,
+  //           progress: projectProgress,
+  //         };
+  //       })
+  //     );
+  //     setProjects(projList);
+  //   });
+
+  //   return () => unsubscribe();
+  // }, []);
 
   const updateStatus = async (projectId: string, status: string) => {
     const ref = doc(db, "projects", projectId);
@@ -142,14 +216,21 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (projectId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this project?"
+    );
+    if (!confirmDelete) return;
+
     try {
-      await deleteDoc(doc(db, "projects", projectId));
+      const ref = doc(db, "projects", projectId);
+      await updateDoc(ref, { isDeleted: true });
+
       toast({
-        title: "Success",
-        description: "Project has been deleted successfully.",
+        title: "Deleted",
+        description: "Project has been marked as deleted.",
       });
     } catch (err) {
-      console.error("Failed to delete project:", err);
+      console.error("Failed to mark project as deleted:", err);
       toast({
         title: "Error",
         description: "Failed to delete project.",
@@ -164,15 +245,19 @@ const AdminDashboard = () => {
       project.designer.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || project.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const isVisible = !project.isDeleted; // 👈 Only show non-deleted
+    return matchesSearch && matchesStatus && isVisible;
   });
 
-  const totalProjects = projects.length;
-  const completedProjects = projects.filter(
-    (p) => p.status === "Completed"
+  const totalProjects = projects.filter(
+    (project) => project.isDeleted !== true
   ).length;
-  const totalRevenue = projects.reduce((sum, p) => sum + p.paidAmount, 0);
-  const pendingRevenue = projects.reduce(
+  const completedProjects = projects.filter(
+    (p) => p.status === "Completed" && p.isDeleted !== true
+  ).length;
+  const activeProjects = projects.filter((p) => p.isDeleted !== true);
+  const totalRevenue = activeProjects.reduce((sum, p) => sum + p.paidAmount, 0);
+  const pendingRevenue = activeProjects.reduce(
     (sum, p) => sum + (p.totalAmount - p.paidAmount),
     0
   );
@@ -192,23 +277,27 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Admin Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Complete overview of all projects and operations
           </p>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => {
-              setEditingProject(null); // ensure it's in create mode
+              setEditingProject(null);
               setOpenDialog(true);
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 px-3 py-2 text-sm md:text-base md:px-4 md:py-2"
           >
             <Plus className="w-4 h-4" />
-            Create New Project
+            <span className="hidden sm:inline">Create New Project</span>
+            <span className="inline sm:hidden">New Project</span>
           </Button>
 
           <CreateProjectDialog
@@ -237,7 +326,7 @@ const AdminDashboard = () => {
                   {totalProjects}
                 </p>
               </div>
-              <Briefcase className="w-8 h-8 text-blue-600" />
+              <Briefcase className="w-8 h-8 text-blue-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -251,7 +340,7 @@ const AdminDashboard = () => {
                   {completedProjects}
                 </p>
               </div>
-              <Clock className="w-8 h-8 text-green-600" />
+              <Clock className="w-8 h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -267,7 +356,7 @@ const AdminDashboard = () => {
                   ₹{totalRevenue.toLocaleString()}
                 </p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-600" />
+              <IndianRupee className="w-8 h-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -283,7 +372,7 @@ const AdminDashboard = () => {
                   ₹{pendingRevenue.toLocaleString()}
                 </p>
               </div>
-              <Users className="w-8 h-8 text-orange-600" />
+              <Users className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -299,7 +388,7 @@ const AdminDashboard = () => {
                   {unreadCount}
                 </p>
               </div>
-              <MessageCircle className="w-8 h-8 text-orange-600" />
+              <MessageCircle className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -315,7 +404,7 @@ const AdminDashboard = () => {
                   {pendingApprovalCount}
                 </p>
               </div>
-              <CheckCircleIcon className="w-8 h-8 text-orange-600" />
+              <CheckCircleIcon className="w-8 h-8 text-orange-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -332,7 +421,7 @@ const AdminDashboard = () => {
                   placeholder="Search projects, clients, or designers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 placeholder:text-xs sm:placeholder:text-sm"
                 />
               </div>
             </div>

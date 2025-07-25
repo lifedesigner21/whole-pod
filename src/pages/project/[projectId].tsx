@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import MilestoneCard from "@/components/MilestoneCard";
+import Breadcrumb from "@/components/BreadCrumb";
 
 const ProjectDetailPage = () => {
     const navigate = useNavigate();
@@ -107,6 +108,7 @@ const ProjectDetailPage = () => {
           Back
         </Button>
 
+        <Breadcrumb paths={[{ name: project.name }, { name: "Milestones" }]} />
         <div className="mx-auto flex flex-col items-center">
           <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
           <p className="text-sm text-gray-500 mt-1 ">
@@ -160,19 +162,33 @@ const ProjectDetailPage = () => {
           <CardTitle>Project Milestones</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {project.milestones?.map((milestone: any) => (
-              <MilestoneCard
-                key={milestone.id}
-                projectId={projectId}
-                milestone={milestone}
-                isClient={true}
-              />
-            ))}
-          </div>
+          <CardContent>
+            {project.milestones?.filter((m: any) => !m.isDeleted).length ===
+            0 ? (
+              <div className="text-center text-gray-500 text-sm col-span-full">
+                No milestones found for this project.
+                <br />
+                <span className="text-blue-600 underline cursor-pointer">
+                  Do you want to add a milestone?
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {project.milestones
+                  ?.filter((m: any) => !m.isDeleted)
+                  .map((milestone: any) => (
+                    <MilestoneCard
+                      key={milestone.id}
+                      projectId={projectId}
+                      milestone={milestone}
+                      isClient={true}
+                    />
+                  ))}
+              </div>
+            )}
+          </CardContent>
         </CardContent>
       </Card>
-
     </div>
   );
 };
