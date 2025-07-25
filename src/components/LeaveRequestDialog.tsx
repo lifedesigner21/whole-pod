@@ -246,13 +246,9 @@ const LeaveRequestDialog = () => {
                 type="url"
                 value={proofUrl}
                 onChange={(e) => setProofUrl(e.target.value)}
-                placeholder="https://drive.google.com/your-medical-report"
+                placeholder="https://drive.google.com"
                 className="text-sm h-10 sm:h-11 bg-white"
               />
-              <p className="text-xs text-blue-700">
-                Upload your medical certificate or report to a cloud service and
-                paste the sharing link here.
-              </p>
               {errors.proofUrl && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <span className="w-1 h-1 bg-red-500 rounded-full"></span>
