@@ -9,6 +9,7 @@ import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "@/components/CreateMilestoneDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import Breadcrumb from "@/components/BreadCrumb";
 
 const AdminProjectDetails = () => {
   const { projectId } = useParams();

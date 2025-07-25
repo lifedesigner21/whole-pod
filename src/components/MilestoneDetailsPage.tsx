@@ -41,7 +41,7 @@ const MilestoneDetailsPage = () => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
-  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null); 
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const location = useLocation();
   const { milestoneName, projectName } = location.state || {};
 
@@ -124,8 +124,12 @@ const MilestoneDetailsPage = () => {
 
   // ✅ FIXED: Simplified task update handler
   const handleTaskUpdate = (updatedTask: Task) => {
-    console.log("🔄 Updating task in parent:", updatedTask.id, updatedTask.title);
-    
+    console.log(
+      "🔄 Updating task in parent:",
+      updatedTask.id,
+      updatedTask.title
+    );
+
     setTasks((prevTasks) =>
       prevTasks.map((task) =>
         task.id === updatedTask.id ? { ...task, ...updatedTask } : task
@@ -148,26 +152,23 @@ const MilestoneDetailsPage = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/dashboard`)}
-        >
+        <Button variant="outline" onClick={() => navigate(`/dashboard`)}>
           <ArrowLeft className="w-4 h-4 mr-1" />
           Go Back
         </Button>
-        <CreateTaskDialog 
-          projectId={projectId!} 
+        <CreateTaskDialog
+          projectId={projectId!}
           milestoneId={milestoneId!}
           onTaskCreated={handleTaskCreatedOrUpdated}
         />
-        <Breadcrumb
-          paths={[
-            { name: projectName || "Project" },
-            { name: milestoneName || "Milestone" },
-            {name:"Tasks"}
-          ]}
-        />
       </div>
+      <Breadcrumb
+        paths={[
+          { name: projectName || "Project" },
+          { name: milestoneName || "Milestone" },
+          { name: "Tasks" },
+        ]}
+      />
 
       <h2 className="text-2xl font-semibold mb-4">Tasks in this Milestone</h2>
 
