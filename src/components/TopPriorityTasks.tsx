@@ -219,7 +219,7 @@ const TopPriorityTasks = () => {
                   Start: {formatDate(task.startDate)}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Due: {formatDate(task.dueDate)}
+                  End: {formatDate(task.dueDate)}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="font-medium">Status: {task.status}</span>

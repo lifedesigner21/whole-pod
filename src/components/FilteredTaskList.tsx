@@ -520,7 +520,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    <span>Due: {formatDate(task.dueDate)}</span>
+                    <span>End: {formatDate(task.dueDate)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -561,8 +561,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                                 if (!runningTimers[task.id]) {
                                   toast({
                                     title: "Invalid Operation",
-                                    description:
-                                      "Please start the timer.",
+                                    description: "Please start the timer.",
                                     variant: "destructive",
                                   });
                                   return;
@@ -582,6 +581,12 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                       </span>
                     )}
                   </div>
+                  {task.onHoldReason && task.status !== "Completed" && (
+                    <div className="text-sm text-yellow-600 mt-2">
+                      <span className="font-semibold">Hold Reason :</span>{" "}
+                      {task.onHoldReason}
+                    </div>
+                  )}
                   {task.isRevision && (
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4" />

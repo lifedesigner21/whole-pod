@@ -278,9 +278,9 @@ const ClientDashboard = () => {
             <div className="text-center text-gray-500 text-sm col-span-full">
               No projects found.
               <br />
-              <span className="text-blue-600 underline cursor-pointer">
+              {/* <span className="text-blue-600 underline cursor-pointer">
                 Do you want to open a new project with us?
-              </span>
+              </span> */}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">

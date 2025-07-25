@@ -313,7 +313,6 @@ const TaskList: React.FC<TaskListProps> = ({
     fetchMilestoneNames();
   }, [tasks, projectId]);
 
-
   // ✅ FIXED: Remove the local task editing logic and dialog
   // Just call the parent's onEditTask function
   const handleEditTask = (task: Task) => {
@@ -607,7 +606,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>Due: {formatDate(task.dueDate)}</span>
+                  <span>End: {formatDate(task.dueDate)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
@@ -617,6 +616,12 @@ const TaskList: React.FC<TaskListProps> = ({
                   <Clock className="w-4 h-4" />
                   <span>Time Taken: {task.actualMinutes} Mins</span>
                 </div>
+                {task.onHoldReason && (
+                  <div className="text-sm text-yellow-600 mt-2">
+                    <span className="font-semibold">Hold Reason :</span>{" "}
+                    {task.onHoldReason}
+                  </div>
+                )}
                 {task.isRevision && task.revisionReasons?.length > 0 && (
                   <div className="text-sm text-red-600 mt-2">
                     <span className="font-semibold">Revision Requested:</span>{" "}
