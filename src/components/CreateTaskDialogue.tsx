@@ -59,6 +59,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   const [form, setForm] = useState({
     title: "",
     description: "",
+    startDate:"",
     dueDate: "",
     estimatedMinutes: "",
     priority: "Medium",
@@ -69,14 +70,31 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
 
   useEffect(() => {
     const fetchDesigners = async () => {
-      const q = query(collection(db, "users"), where("role", "==", "designer"));
-      const snapshot = await getDocs(q);
-      const users: DesignerUser[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name || "Unnamed",
-      }));
-      setDesigners(users);
+      try {
+        const [designerSnap, allowedSnap] = await Promise.all([
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "designer"))
+          ),
+          getDocs(collection(db, "allowedUsers")),
+        ]);
+
+        const allowedEmails = new Set(
+          allowedSnap.docs.map((doc) => doc.data().email?.toLowerCase())
+        );
+
+        const filteredDesigners: DesignerUser[] = designerSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name || "Unnamed",
+          }));
+
+        setDesigners(filteredDesigners);
+      } catch (error) {
+        console.error("Error fetching allowed designers:", error);
+      }
     };
+
     fetchDesigners();
   }, []);
 
@@ -86,6 +104,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       setForm({
         title: taskToEdit.title || "",
         description: taskToEdit.description || "",
+        startDate: taskToEdit.startDate || "",
         dueDate: taskToEdit.dueDate || "",
         estimatedMinutes: taskToEdit.estimatedMinutes?.toString() || "",
         priority: taskToEdit.priority || "Medium",
@@ -145,12 +164,14 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     const taskData = {
       title: form.title,
       description: form.description,
+      startDate: form.startDate,
       dueDate: form.dueDate,
       estimatedMinutes: parseInt(form.estimatedMinutes) || 0,
       priority: form.priority,
       status: form.status,
       assignedTo: form.assignedTo,
       assignedToName: assignedUser?.name || "Unknown",
+      createdBy:user.uid
     };
 
     if (taskToEdit?.id) {
@@ -209,6 +230,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     setForm({
       title: "",
       description: "",
+      startDate:"",
       dueDate: "",
       estimatedMinutes: "",
       priority: "Medium",
@@ -250,7 +272,14 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
 
-          <label className="text-sm font-medium">Due Date</label>
+          <label className="text-sm font-medium">Start Date</label>
+          <Input
+            type="date"
+            value={form.startDate}
+            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          />
+
+          <label className="text-sm font-medium">End Date</label>
           <Input
             type="date"
             value={form.dueDate}

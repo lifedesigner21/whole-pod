@@ -102,6 +102,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
       ...form,
       totalAmount: Number(form.totalAmount),
       paidAmount: mode === "edit" ? Number(form.paidAmount) : 0,
+      projectCreatedBy:user.uid
     };
 
     try {
@@ -124,6 +125,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           milestones: [],
           paidAmount: project.paidAmount,
           isDeleted: false,
+          projectCreatedBy:user.uid
         });
 
         // 🔔 Notifications
@@ -217,32 +219,36 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const clientQuery = query(
-          collection(db, "users"),
-          where("role", "==", "client")
-        );
-        const designerQuery = query(
-          collection(db, "users"),
-          where("role", "==", "designer")
-        );
-
-        const [clientSnap, designerSnap] = await Promise.all([
-          getDocs(clientQuery),
-          getDocs(designerQuery),
+        const [clientSnap, designerSnap, allowedSnap] = await Promise.all([
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "client"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "designer"))
+          ),
+          getDocs(collection(db, "allowedUsers")),
         ]);
 
-        const fetchedClients = clientSnap.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name,
-        }));
+        const allowedEmails = new Set(
+          allowedSnap.docs.map((doc) => doc.data().email?.toLowerCase())
+        );
 
-        const fetchedDesigners = designerSnap.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name,
-        }));
+        const filteredClients = clientSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name,
+          }));
 
-        setClients(fetchedClients);
-        setDesigners(fetchedDesigners);
+        const filteredDesigners = designerSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name,
+          }));
+
+        setClients(filteredClients);
+        setDesigners(filteredDesigners);
       } catch (error) {
         console.error("Error fetching users:", error);
       }

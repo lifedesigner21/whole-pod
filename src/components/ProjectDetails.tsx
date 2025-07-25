@@ -2,19 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  MessageSquare,
-  FileText,
-  TimerIcon,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle, TimerIcon } from "lucide-react";
 import { Project } from "@/data/mockData";
-import KanbanTasks from "./KanbanTasks";
-import CreateTaskDialog from "./CreateTaskDialogue";
 import {
   collection,
   collectionGroup,

@@ -26,6 +26,7 @@ interface Task {
   description: string;
   priority: "High" | "Medium" | "Low";
   status: string;
+  startDate:string;
   dueDate: string;
   assignedTo: string;
   projectId: string;
@@ -213,6 +214,9 @@ const TopPriorityTasks = () => {
                 </p>
                 <p className="text-sm text-gray-500">
                   Designer: {task.assignedToName}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Start: {formatDate(task.startDate)}
                 </p>
                 <p className="text-sm text-gray-500">
                   Due: {formatDate(task.dueDate)}

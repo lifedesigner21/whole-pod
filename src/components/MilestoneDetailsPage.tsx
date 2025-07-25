@@ -150,7 +150,7 @@ const MilestoneDetailsPage = () => {
       <div className="flex justify-between items-center mb-6">
         <Button
           variant="outline"
-          onClick={() => navigate(`/project/${projectId}`)}
+          onClick={() => navigate(`/dashboard`)}
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Go Back

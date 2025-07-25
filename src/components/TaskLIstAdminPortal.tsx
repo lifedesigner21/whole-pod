@@ -46,11 +46,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 interface Task {
   id: string;
   title: string;
   description: string;
+  startDate: string;
   dueDate: string;
   estimatedHours: number;
   priority: string;
@@ -70,6 +72,7 @@ interface Task {
   isApproved?: boolean;
   assignedTo?: string;
   isDeleted?: boolean;
+  startedAt?: string;
 }
 
 interface TaskListProps {
@@ -153,21 +156,28 @@ const TaskList: React.FC<TaskListProps> = ({
   useEffect(() => {
     // console.log("🔄 INIT: Initializing timers from tasks");
     const initialTimers: Record<string, number> = {};
+
     tasks.forEach((task) => {
-      if (task.actualMinutes && task.actualMinutes > 0) {
-        initialTimers[task.id] = task.actualMinutes * 60;
-        // console.log(
-        //   `🔄 INIT: Task ${task.id} (${task.title}) has ${
-        //     task.actualMinutes
-        //   } minutes (${task.actualMinutes * 60} seconds)`
-        // );
+      let totalSeconds = (task.actualMinutes || 0) * 60;
+
+      if (task.startedAt && !task.onHoldReason && task.status !== "Completed") {
+        const startedAt = new Date(task.startedAt).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.floor((now - startedAt) / 1000);
+        totalSeconds += diffSeconds;
+
+        // Also mark this task as running
+        setRunningTimers((prev) => ({ ...prev, [task.id]: true }));
       }
+
+      initialTimers[task.id] = totalSeconds;
     });
-    // console.log("🔄 INIT: Initial timers:", initialTimers);
+
     setTimers(initialTimers);
   }, [tasks]);
 
   useEffect(() => {
+    // console.log("🔄 TIMER: Timer effect running");
     // console.log("🔄 TIMER: Timer effect running");
     const interval = setInterval(() => {
       setTimers((prev) => {
@@ -179,6 +189,7 @@ const TaskList: React.FC<TaskListProps> = ({
             updated[taskId] = (updated[taskId] || 0) + 1;
             hasRunningTimer = true;
 
+            // Log every 10 seconds to avoid spam
             if (updated[taskId] % 10 === 0) {
               console.log(
                 `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
@@ -194,7 +205,7 @@ const TaskList: React.FC<TaskListProps> = ({
     }, 1000);
 
     return () => {
-      console.log("🔄 TIMER: Timer cleanup");
+      // console.log("🔄 TIMER: Timer cleanup");
       clearInterval(interval);
     };
   }, [runningTimers]);
@@ -251,9 +262,9 @@ const TaskList: React.FC<TaskListProps> = ({
       );
       await updateDoc(taskRef, { isDeleted: true });
       console.log("Task deleted successfully");
-      
+
       // Update local state immediately to reflect the change
-      const updatedTask = tasks.find(t => t.id === taskId);
+      const updatedTask = tasks.find((t) => t.id === taskId);
       if (updatedTask) {
         onTaskUpdate({ ...updatedTask, isDeleted: true });
       }
@@ -309,8 +320,23 @@ const TaskList: React.FC<TaskListProps> = ({
     onEditTask(task); // This will be handled by the parent component
   };
 
-  const handleStart = (taskId: string) => {
-    setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+  const handleStart = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, {
+        startedAt: new Date().toISOString(),
+      });
+      setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+    } catch (err) {
+      console.error("❌ Failed to start timer:", err);
+    }
   };
 
   const handleHold = (taskId: string) => {
@@ -362,8 +388,8 @@ const TaskList: React.FC<TaskListProps> = ({
 
     try {
       await updateDoc(taskRef, updateData);
-      console.log("✅ HOLD: Database updated successfully");
-      
+      // console.log("✅ HOLD: Database updated successfully");
+
       // Update local state
       onTaskUpdate({ ...task, ...updateData });
     } catch (error) {
@@ -372,7 +398,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
     setHoldReason("");
     setShowHoldDialogFor(null);
-    console.log("🔄 HOLD: Process completed, dialog closed");
+    // console.log("🔄 HOLD: Process completed, dialog closed");
   };
 
   const handleComplete = (taskId: string) => {
@@ -380,7 +406,7 @@ const TaskList: React.FC<TaskListProps> = ({
   };
 
   const confirmComplete = async () => {
-    console.log("🎯 COMPLETE: Starting confirmComplete process");
+    // console.log("🎯 COMPLETE: Starting confirmComplete process");
 
     if (!showCompleteDialogFor || !proofUrl.trim()) {
       console.log(
@@ -416,7 +442,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
     try {
       await updateDoc(taskRef, updateData);
-      console.log("✅ COMPLETE: Task updated successfully");
+      // console.log("✅ COMPLETE: Task updated successfully");
 
       // Update milestone progress
       const tasksSnapshot = await getDocs(
@@ -444,8 +470,8 @@ const TaskList: React.FC<TaskListProps> = ({
       );
 
       await updateDoc(milestoneRef, { progress });
-      console.log("✅ COMPLETE: Milestone progress updated successfully");
-      
+      // console.log("✅ COMPLETE: Milestone progress updated successfully");
+
       // Update local state
       onTaskUpdate({ ...task, ...updateData });
     } catch (error) {
@@ -577,7 +603,11 @@ const TaskList: React.FC<TaskListProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>Due: {task.dueDate}</span>
+                  <span>Start: {formatDate(task.startDate)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Due: {formatDate(task.dueDate)}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
@@ -595,41 +625,48 @@ const TaskList: React.FC<TaskListProps> = ({
                 )}
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>
+
                   {task.status !== "completed" ? (
-                    <Popover
-                      open={openPopoverId === task.id}
-                      onOpenChange={(open) =>
-                        setOpenPopoverId(open ? task.id : null)
-                      }
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          {task.status}
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-2 w-[150px]">
-                        {statusOptions.map((status) => (
+                    userRole !== "designer" ? (
+                      <Popover
+                        open={openPopoverId === task.id}
+                        onOpenChange={(open) =>
+                          setOpenPopoverId(open ? task.id : null)
+                        }
+                      >
+                        <PopoverTrigger asChild>
                           <Button
-                            key={status}
-                            variant={
-                              status === task.status ? "default" : "ghost"
-                            }
-                            className="w-full justify-start text-left"
-                            onClick={() => {
-                              onStatusChange(task.id, status);
-                              setOpenPopoverId(null);
-                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
                           >
-                            {status}
+                            {task.status}
+                            <ChevronDown className="w-4 h-4" />
                           </Button>
-                        ))}
-                      </PopoverContent>
-                    </Popover>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-2 w-[150px]">
+                          {statusOptions.map((status) => (
+                            <Button
+                              key={status}
+                              variant={
+                                status === task.status ? "default" : "ghost"
+                              }
+                              className="w-full justify-start text-left"
+                              onClick={() => {
+                                onStatusChange(task.id, status);
+                                setOpenPopoverId(null);
+                              }}
+                            >
+                              {status}
+                            </Button>
+                          ))}
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <span className="text-gray-600 font-medium">
+                        {task.status}
+                      </span>
+                    )
                   ) : (
                     <span className="text-green-600 font-medium">
                       {task.status}
@@ -637,47 +674,54 @@ const TaskList: React.FC<TaskListProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span
-                    className={
-                      runningTimers[task.id]
-                        ? "text-red-500 font-medium"
-                        : "text-green-600 font-medium"
-                    }
-                  >
-                    {formatMinutes(
-                      timers[task.id] || (task.actualMinutes || 0) * 60
-                    )}
-                  </span>
-                </div>
+                {userRole !== "designer" && userRole !== "admin" && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={
+                        runningTimers[task.id]
+                          ? "text-red-500 font-medium"
+                          : "text-green-600 font-medium"
+                      }
+                    >
+                      {formatMinutes(
+                        timers[task.id] || (task.actualMinutes || 0) * 60
+                      )}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {task.status !== "Completed" && userRole !== "admin" && (
-                    <>
-                      {!runningTimers[task.id] ? (
-                        <Button onClick={() => handleStart(task.id)} size="sm">
-                          Start
-                        </Button>
-                      ) : (
-                        <>
+                  {task.status !== "Completed" &&
+                    userRole !== "admin" &&
+                    userRole !== "designer" && (
+                      <>
+                        {!runningTimers[task.id] ? (
                           <Button
-                            onClick={() => handleHold(task.id)}
-                            variant="secondary"
+                            onClick={() => handleStart(task.id)}
                             size="sm"
                           >
-                            Hold
+                            Start
                           </Button>
-                          <Button
-                            onClick={() => handleComplete(task.id)}
-                            variant="default"
-                            size="sm"
-                          >
-                            Completed
-                          </Button>
-                        </>
-                      )}
-                    </>
-                  )}
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => handleHold(task.id)}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              Hold
+                            </Button>
+                            <Button
+                              onClick={() => handleComplete(task.id)}
+                              variant="default"
+                              size="sm"
+                            >
+                              Completed
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
 
                   {userRole === "admin" && (
                     <>
@@ -695,8 +739,9 @@ const TaskList: React.FC<TaskListProps> = ({
                               isRevision: false,
                               status: "Completed",
                             };
-                            
+
                             await updateDoc(taskRef, updateData);
+                            // console.log("✅ APPROVED: Task updated");
 
                             // Update milestone progress
                             const tasksSnapshot = await getDocs(
@@ -743,7 +788,7 @@ const TaskList: React.FC<TaskListProps> = ({
                               read: false,
                               createdAt: new Date(),
                             });
-                            
+
                             // Update local state
                             onTaskUpdate({ ...task, ...updateData });
                           } catch (err) {
@@ -1077,7 +1122,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   };
 
                   await updateDoc(taskRef, updateData);
-                  console.log("✅ REVISION: Task updated", revisionReason);
+                  // console.log("✅ REVISION: Task updated", revisionReason);
 
                   // Update local state
                   onTaskUpdate({ ...selectedTask, ...updateData });
