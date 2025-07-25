@@ -44,6 +44,7 @@ interface Task {
   title: string;
   description: string;
   priority: "Low" | "Medium" | "High";
+  isDeleted?: boolean;
 }
 
 const TasksPage: React.FC = () => {
@@ -67,58 +68,59 @@ const TasksPage: React.FC = () => {
   const [designerUid, setDesignerUid] = useState<string | null>(null);
   const navigate = useNavigate();
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
-  const [projectName,setProjectName] = useState<string | null>(null)
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [milestoneName, setMilestoneName] = useState<string | null>(null);
 
-useEffect(() => {
-  const fetchData = async () => {
-    if (!projectId || !milestoneId) return;
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!projectId || !milestoneId) return;
 
-    // Fetch Project
-    const projectRef = doc(db, "projects", projectId);
-    const projectSnap = await getDoc(projectRef);
-    if (projectSnap.exists()) {
-      const projectData = projectSnap.data();
-      setProjectName(projectData.name);
-      setClientUid(projectData.clientId || null);
-      setDesignerUid(projectData.designerId || null);
-    }
+      // Fetch Project
+      const projectRef = doc(db, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data();
+        setProjectName(projectData.name);
+        setClientUid(projectData.clientId || null);
+        setDesignerUid(projectData.designerId || null);
+      }
 
-    // Fetch Milestone
-    const milestoneRef = doc(
-      db,
-      "projects",
-      projectId,
-      "milestones",
-      milestoneId
-    );
-    const milestoneSnap = await getDoc(milestoneRef);
-    if (milestoneSnap.exists()) {
-      const milestoneData = milestoneSnap.data();
-      setMilestoneName(milestoneData.name);
-    }
+      // Fetch Milestone
+      const milestoneRef = doc(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId
+      );
+      const milestoneSnap = await getDoc(milestoneRef);
+      if (milestoneSnap.exists()) {
+        const milestoneData = milestoneSnap.data();
+        setMilestoneName(milestoneData.name);
+      }
 
-    // Fetch Tasks
-    const tasksRef = collection(
-      db,
-      "projects",
-      projectId,
-      "milestones",
-      milestoneId,
-      "tasks"
-    );
-    const snapshot = await getDocs(tasksRef);
-    const taskList: Task[] = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as Task),
-    }));
-    setTasks(taskList);
-  };
+      // Fetch Tasks
+      const tasksRef = collection(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId,
+        "tasks"
+      );
+      const snapshot = await getDocs(tasksRef);
+      const taskList: Task[] = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Task),
+        }))
+        .filter((task) => !task.isDeleted);
 
-  fetchData();
-}, [projectId, milestoneId]);
+      setTasks(taskList);
+    };
 
-
+    fetchData();
+  }, [projectId, milestoneId]);
 
   const handleOpenChat = (
     task: Task,
@@ -159,7 +161,6 @@ useEffect(() => {
     setEditContent("");
   };
 
-
   const handleDelete = async (id: string) => {
     if (!projectId || !milestoneId || !selectedTask) return;
 
@@ -192,7 +193,6 @@ useEffect(() => {
     }
   }, [openChat]);
 
-
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <Button
@@ -205,9 +205,9 @@ useEffect(() => {
       </Button>
       <Breadcrumb
         paths={[
-          { name: projectName,},
+          { name: projectName },
           { name: milestoneName || "Milestone" },
-          {name:"Tasks"}
+          { name: "Tasks" },
         ]}
       />
 
@@ -217,56 +217,66 @@ useEffect(() => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {tasks.map((task) => (
-          <Card key={task.id} className="hover:shadow transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-2xl">{task.title}</CardTitle>
-                <span
-                  className={`ml-4 px-2 py-1 text-xs font-semibold rounded-full ${
-                    task.priority === "High"
-                      ? "bg-red-100 text-red-800"
-                      : task.priority === "Medium"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
-                  }`}
-                >
-                  {task.priority}
-                </span>
-              </div>
-              <p className="text-md text-gray-500 mt-1">{task.description}</p>
-            </CardHeader>
+        {tasks.length === 0 ? (
+          <div className="text-center text-gray-500 text-sm col-span-full mt-4">
+            No tasks found in this milestone.
+            <br />
+            <span className="text-blue-600 underline cursor-pointer">
+              Do you want to add the tasks?
+            </span>
+          </div>
+        ) : (
+          tasks.map((task) => (
+            <Card key={task.id} className="hover:shadow transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-2xl">{task.title}</CardTitle>
+                  <span
+                    className={`ml-4 px-2 py-1 text-xs font-semibold rounded-full ${
+                      task.priority === "High"
+                        ? "bg-red-100 text-red-800"
+                        : task.priority === "Medium"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {task.priority}
+                  </span>
+                </div>
+                <p className="text-md text-gray-500 mt-1">{task.description}</p>
+              </CardHeader>
 
-            <CardContent className="space-y-3 text-sm text-gray-700">
-              <div className="flex items-center gap-2">
-                <ListChecks className="w-4 h-4" />
-                <span>Status: {task.status}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>Designer: {task.assignedToName}</span>
-              </div>
-              <div className="flex gap-2">
-                {(userRole === "admin" || userRole === "client") && (
-                  <button
-                    onClick={() => handleOpenChat(task, "admin-client")}
-                    className="mt-3 inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded hover:bg-gray-800"
-                  >
-                    <MessageSquare className="w-4 h-4" /> Admin Chat
-                  </button>
-                )}
-                {(userRole === "admin" || userRole === "designer") && (
-                  <button
-                    onClick={() => handleOpenChat(task, "admin-designer")}
-                    className="mt-3 inline-flex items-center gap-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
-                  >
-                    <MessageSquare className="w-4 h-4" /> Designer Chat
-                  </button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              <CardContent className="space-y-3 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="w-4 h-4" />
+                  <span>Status: {task.status}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <span>Designer: {task.assignedToName}</span>
+                </div>
+                <div className="flex gap-2">
+                  {(userRole === "admin" || userRole === "client") && (
+                    <button
+                      onClick={() => handleOpenChat(task, "admin-client")}
+                      className="mt-3 inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded hover:bg-gray-800"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Admin Chat
+                    </button>
+                  )}
+                  {(userRole === "admin" || userRole === "designer") && (
+                    <button
+                      onClick={() => handleOpenChat(task, "admin-designer")}
+                      className="mt-3 inline-flex items-center gap-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Designer Chat
+                    </button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Sheet open={openChat} onOpenChange={setOpenChat}>
@@ -328,10 +338,10 @@ useEffect(() => {
                         className={` w-fit max-w-[90%] p-3 rounded-lg shadow-sm text-sm ${
                           isOwnMessage
                             ? "bg-blue-100 text-left ml-auto pr-[10%]"
-                            : "bg-white text-left pl-[10%]"
+                            : "bg-white text-left pr-[10%]"
                         }`}
                       >
-                        <div className="font-semibold text-gray-800 mb-1">
+                        <div className="font-medium text-gray-800 mb-1 text-xs">
                           {msg.sender}
                         </div>
 
@@ -348,7 +358,7 @@ useEffect(() => {
                             </div>
                           </div>
                         ) : (
-                          <div className="text-black whitespace-pre-wrap">
+                          <div className="text-black whitespace-pre-wrap font-bold text-md">
                             {msg.content}
                           </div>
                         )}

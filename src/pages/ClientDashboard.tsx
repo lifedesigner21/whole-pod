@@ -47,6 +47,7 @@ const ClientDashboard = () => {
 
         snapshot.forEach((doc) => {
           const project = { id: doc.id, ...(doc.data() as Project) };
+          if (project.isDeleted) return;
           allProjects.push(project);
 
           if (project.status === "Completed") {
@@ -273,19 +274,29 @@ const ClientDashboard = () => {
           <CardTitle>Active Projects</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {projects
-              .filter((project) => project.status === "Active")
-              .map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onViewDetails={handleViewDetails}
-                  showClientInfo={false}
-                  showDesignerInfo={true}
-                />
-              ))}
-          </div>
+          {projects.filter((p) => p.status === "Active").length === 0 ? (
+            <div className="text-center text-gray-500 text-sm col-span-full">
+              No projects found.
+              <br />
+              <span className="text-blue-600 underline cursor-pointer">
+                Do you want to open a new project with us?
+              </span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {projects
+                .filter((project) => project.status === "Active")
+                .map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onViewDetails={handleViewDetails}
+                    showClientInfo={false}
+                    showDesignerInfo={true}
+                  />
+                ))}
+            </div>
+          )}
         </CardContent>
       </Card>
       {/* Projects on Hold */}

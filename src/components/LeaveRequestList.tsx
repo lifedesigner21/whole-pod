@@ -129,10 +129,14 @@ const LeaveRequestList = () => {
                   <td className="py-2 px-3 capitalize">{req.role}</td>
                   <td className="py-2 px-3">{req.leaveType}</td>
                   <td className="py-2 px-3">
-                    {format(new Date(req.leaveFrom), "dd MMM yyyy")}
+                    {req.leaveFrom
+                      ? format(new Date(req.leaveFrom), "dd MMM yyyy")
+                      : "N/A"}
                   </td>
                   <td className="py-2 px-3">
-                    {format(new Date(req.leaveTo), "dd MMM yyyy")}
+                    {req.leaveTo
+                      ? format(new Date(req.leaveTo), "dd MMM yyyy")
+                      : "N/A"}
                   </td>
                   <td className="py-2 px-3">{req.reason}</td>
                   <td className="py-2 px-3">
