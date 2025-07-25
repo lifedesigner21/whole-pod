@@ -71,6 +71,8 @@ const AdminProjectDetails = () => {
         Back to Dashboard
       </Button>
 
+      <Breadcrumb paths={[{ name: project.name }, { name: "Milestones" }]} />
+
       {/* Create Milestone Button */}
       {userRole !== "designer" && (
         <Button
@@ -91,7 +93,6 @@ const AdminProjectDetails = () => {
         onMilestoneCreated={fetchMilestones}
       />
 
-      <h2 className="text-xl font-semibold">Project: {project.name}</h2>
       {/* <p className="text-sm text-gray-600">{project.brief}</p> */}
 
       {/* Milestone Cards */}
