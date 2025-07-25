@@ -616,7 +616,12 @@ const TaskList: React.FC<TaskListProps> = ({
                   <Clock className="w-4 h-4" />
                   <span>Time Taken: {task.actualMinutes} Mins</span>
                 </div>
-                {task.onHoldReason && (
+                {task.isApproved === true && (
+                  <div className="text-sm text-green-600 mt-2">
+                    <span className="font-semibold font-italic">Approved </span>
+                  </div>
+                )}
+                {task.onHoldReason && task.status !== "Completed" && (
                   <div className="text-sm text-yellow-600 mt-2">
                     <span className="font-semibold">Hold Reason :</span>{" "}
                     {task.onHoldReason}

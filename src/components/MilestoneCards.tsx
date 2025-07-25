@@ -226,12 +226,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
 
   return (
     <>
-      <Breadcrumb
-        paths={[
-          { name: projectName || "Unnamed Project" },
-          { name: "Milestones" },
-        ]}
-      />
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {project.milestones.map((milestone) => {
           const isChatOpen = openChatId === milestone.id;

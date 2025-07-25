@@ -18,6 +18,7 @@ import { db } from "@/lib/firebase";
 import { formatDate } from "@/lib/utils";
 import MilestoneCards from "./MilestoneCards";
 import { CreateMilestoneDialogRef } from "./CreateMilestoneDialog";
+import Breadcrumb from "./BreadCrumb";
 
 interface Task {
   id: string;
@@ -128,6 +129,13 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
           Back to Dashboard
         </Button>
       </div>
+
+      <Breadcrumb
+        paths={[
+          { name: project.name || "Unnamed Project" },
+          { name: "Milestones" },
+        ]}
+      />
 
       {/* Project Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

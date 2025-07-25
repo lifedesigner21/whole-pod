@@ -160,16 +160,16 @@ const MilestoneDetailsPage = () => {
           milestoneId={milestoneId!}
           onTaskCreated={handleTaskCreatedOrUpdated}
         />
+        <Breadcrumb
+          paths={[
+            { name: projectName || "Project" },
+            { name: milestoneName || "Milestone" },
+            {name:"Tasks"}
+          ]}
+        />
       </div>
 
       <h2 className="text-2xl font-semibold mb-4">Tasks in this Milestone</h2>
-      <Breadcrumb
-        paths={[
-          { name: projectName || "Project" },
-          { name: milestoneName || "Milestone" },
-          {name:"Tasks"}
-        ]}
-      />
 
       {tasks.length === 0 ? (
         <p className="text-gray-500">No tasks available.</p>
