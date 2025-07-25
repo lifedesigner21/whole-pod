@@ -30,6 +30,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface CreateTaskDialogProps {
   projectId: string;
@@ -96,6 +97,50 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   }, [taskToEdit]);
 
   const handleSubmit = async () => {
+    if (!form.title.trim()) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!form.description.trim()) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!form.dueDate) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!form.estimatedMinutes || isNaN(Number(form.estimatedMinutes))) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!form.assignedTo) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
     const assignedUser = designers.find((d) => d.id === form.assignedTo);
     const taskData = {
       title: form.title,

@@ -107,47 +107,60 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Filter tasks by status and type
-  const completedTasks = tasks.filter((task) => task.status === "Completed" && task.isDeleted !== true);
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed" && task.isDeleted !== true
+  );
 
   const revisionTasks = tasks.filter(
-    (task) => task.isRevision && task.status !== "Completed" && task.isDeleted !== true
+    (task) =>
+      task.isRevision && task.status !== "Completed" && task.isDeleted !== true
   );
 
   const newTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed" ||  task.isDeleted === true )
+    if (
+      !task.createdAt ||
+      task.isRevision ||
+      task.status === "Completed" ||
+      task.isDeleted === true
+    )
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate === today;
   });
 
   const pendingTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed" || task.isDeleted === true)
+    if (
+      !task.createdAt ||
+      task.isRevision ||
+      task.status === "Completed" ||
+      task.isDeleted === true
+    )
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate < today;
   });
 
   useEffect(() => {
-  const initialTimers: Record<string, number> = {};
+    const initialTimers: Record<string, number> = {};
 
-  tasks.forEach((task) => {
-    let totalSeconds = (task.actualMinutes || 0) * 60;
+    tasks.forEach((task) => {
+      let totalSeconds = (task.actualMinutes || 0) * 60;
 
-    if (task.startedAt && !task.onHoldReason && task.status !== "Completed") {
-      const startedAt = new Date(task.startedAt).getTime();
-      const now = Date.now();
-      const diffSeconds = Math.floor((now - startedAt) / 1000);
-      totalSeconds += diffSeconds;
+      if (task.startedAt && !task.onHoldReason && task.status !== "Completed") {
+        const startedAt = new Date(task.startedAt).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.floor((now - startedAt) / 1000);
+        totalSeconds += diffSeconds;
 
-      // Also mark this task as running
-      setRunningTimers((prev) => ({ ...prev, [task.id]: true }));
-    }
+        // Also mark this task as running
+        setRunningTimers((prev) => ({ ...prev, [task.id]: true }));
+      }
 
-    initialTimers[task.id] = totalSeconds;
-  });
+      initialTimers[task.id] = totalSeconds;
+    });
 
-  setTimers(initialTimers);
-}, [tasks]);
+    setTimers(initialTimers);
+  }, [tasks]);
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -228,23 +241,23 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   }, [runningTimers]);
 
   const handleStart = async (taskId: string) => {
-  const task = tasks.find((t) => t.id === taskId);
-  if (!task) return;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
 
-  const taskRef = doc(
-    db,
-    `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-  );
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
 
-  try {
-    await updateDoc(taskRef, {
-      startedAt: new Date().toISOString(),
-    });
-    setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
-  } catch (err) {
-    console.error("❌ Failed to start timer:", err);
-  }
-};
+    try {
+      await updateDoc(taskRef, {
+        startedAt: new Date().toISOString(),
+      });
+      setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+    } catch (err) {
+      console.error("❌ Failed to start timer:", err);
+    }
+  };
 
   const handleHold = (taskId: string) => {
     setShowHoldDialogFor(taskId);
@@ -474,7 +487,9 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
               <CardTitle className="flex justify-between items-center">
                 {task.title}
                 <span
-                  className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${task.priority}`}
+                  className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${getPriorityColor(
+                    task.priority
+                  )}`}
                 >
                   {task.priority}
                 </span>

@@ -89,6 +89,15 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   const { user } = useAuth();
 
   const handleSubmit = async () => {
+    // ✅ Validate required fields before proceeding
+    if (!form.name || !form.clientId || !form.designerId || !form.totalAmount) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
     const project = {
       ...form,
       totalAmount: Number(form.totalAmount),
@@ -114,7 +123,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           pendingFeedback: [],
           milestones: [],
           paidAmount: project.paidAmount,
-          isDeleted: false
+          isDeleted: false,
         });
 
         // 🔔 Notifications
@@ -258,6 +267,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <Input
               placeholder="Enter project name"
+              required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -267,6 +277,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             <label className="text-sm font-medium text-gray-700">Client</label>
             <Select
               value={form.clientId}
+              required
               onValueChange={(val) => {
                 const selectedClient = clients.find((c) => c.id === val);
                 if (selectedClient) {
@@ -297,6 +308,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <textarea
               rows={4}
+              required
               placeholder="Describe the project..."
               className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring focus:ring-blue-200"
               value={form.brief}
@@ -308,6 +320,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             <label className="text-sm font-medium text-gray-700">POC</label>
             <Select
               value={form.designerId}
+              required
               onValueChange={(val) => {
                 const selectedDesigner = designers.find((d) => d.id === val);
                 if (selectedDesigner) {
@@ -355,6 +368,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <Input
               type="number"
+              required
               placeholder="Enter total amount"
               value={form.totalAmount}
               onChange={(e) =>
@@ -369,6 +383,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <Input
               type="number"
+              required
               placeholder="Enter paid amount"
               value={form.paidAmount}
               onChange={(e) => setForm({ ...form, paidAmount: e.target.value })}
@@ -381,6 +396,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <Input
               type="date"
+              required
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
             />
@@ -392,6 +408,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             </label>
             <Input
               type="date"
+              required
               value={form.endDate}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
             />

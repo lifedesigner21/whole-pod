@@ -14,8 +14,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
 import LeaveRequestDialog from "./LeaveRequestDialog";
+import { format } from "date-fns";
 
 interface LeaveRequest {
   id: string;

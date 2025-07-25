@@ -109,7 +109,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, any[]>>({});
-  const [pendingAmount, setPendingAmount] = useState(0);
+  const [pendingAmount, setPendingAmount] = useState("0");
   const [paymentDueDate, setPaymentDueDate] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("Pending");
 
@@ -155,6 +155,17 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
 
   const handleSubmitInvoice = async () => {
     if (!selectedMilestone || !invoiceUrl.trim()) return;
+    // ✅ Regex-based URL validation
+    const urlRegex =
+      /^(https?:\/\/)([\w\-]+\.)+[\w\-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
+    if (!urlRegex.test(invoiceUrl.trim())) {
+      toast({
+        title: "Missing required fields",
+        description: "Please provide proper invoice url before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "invoiceUrls"), {
@@ -164,7 +175,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         projectId,
         projectName: selectedMilestone.projectName || "Unknown Project",
         clientId: selectedMilestone.clientId,
-        pendingAmount,
+        pendingAmount: Number(pendingAmount) || 0,
         paymentDueDate,
         status: paymentStatus,
         createdAt: new Date().toISOString(),
@@ -178,7 +189,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
       setIsDialogOpen(false);
       setInvoiceUrl("");
       setPaymentDueDate("");
-      setPendingAmount(0);
+      setPendingAmount("0");
       setPaymentStatus("Pending");
       setSelectedMilestone(null);
     } catch (error) {
@@ -213,13 +224,12 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
     return <p className="text-gray-500 mt-4">No milestones added yet.</p>;
   }
 
-
   return (
     <>
       <Breadcrumb
         paths={[
-          { name: projectName||"Unnamed Project" },
-          {name:"Milestones"}
+          { name: projectName || "Unnamed Project" },
+          { name: "Milestones" },
         ]}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -421,7 +431,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               type="number"
               placeholder="Enter amount to pay for the milestone"
               value={pendingAmount}
-              onChange={(e) => setPendingAmount(Number(e.target.value))}
+              onChange={(e) => setPendingAmount(e.target.value)}
             />
             <Label htmlFor="invoice-url">Payment Due</Label>
             <Input
@@ -449,6 +459,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               placeholder="https://example.com/invoice"
               value={invoiceUrl}
               onChange={(e) => setInvoiceUrl(e.target.value)}
+              required
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
