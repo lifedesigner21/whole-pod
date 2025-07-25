@@ -135,6 +135,9 @@ const TaskList: React.FC<TaskListProps> = ({
   const [clientUid, setClientUid] = useState<string | null>(null);
   const [designerUid, setDesignerUid] = useState<string | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  const [milestoneNames, setMilestoneNames] = useState<Record<string, string>>(
+    {}
+  );
 
   useEffect(() => {
     const visibleTasks = tasks.filter((task) => task.isDeleted !== true);
@@ -148,24 +151,24 @@ const TaskList: React.FC<TaskListProps> = ({
   }, [tasks, userRole, user]);
 
   useEffect(() => {
-    console.log("🔄 INIT: Initializing timers from tasks");
+    // console.log("🔄 INIT: Initializing timers from tasks");
     const initialTimers: Record<string, number> = {};
     tasks.forEach((task) => {
       if (task.actualMinutes && task.actualMinutes > 0) {
         initialTimers[task.id] = task.actualMinutes * 60;
-        console.log(
-          `🔄 INIT: Task ${task.id} (${task.title}) has ${
-            task.actualMinutes
-          } minutes (${task.actualMinutes * 60} seconds)`
-        );
+        // console.log(
+        //   `🔄 INIT: Task ${task.id} (${task.title}) has ${
+        //     task.actualMinutes
+        //   } minutes (${task.actualMinutes * 60} seconds)`
+        // );
       }
     });
-    console.log("🔄 INIT: Initial timers:", initialTimers);
+    // console.log("🔄 INIT: Initial timers:", initialTimers);
     setTimers(initialTimers);
   }, [tasks]);
 
   useEffect(() => {
-    console.log("🔄 TIMER: Timer effect running");
+    // console.log("🔄 TIMER: Timer effect running");
     const interval = setInterval(() => {
       setTimers((prev) => {
         const updated = { ...prev };
@@ -259,6 +262,47 @@ const TaskList: React.FC<TaskListProps> = ({
     }
   };
 
+  useEffect(() => {
+    const fetchMilestoneNames = async () => {
+      const tasksWithoutMilestoneNames = tasks.filter(
+        (task) => task.milestoneId && !task.milestoneName
+      );
+
+      if (tasksWithoutMilestoneNames.length === 0) return;
+
+      const names: Record<string, string> = {};
+
+      // Get unique milestone IDs
+      const milestoneIds = [
+        ...new Set(tasksWithoutMilestoneNames.map((task) => task.milestoneId)),
+      ];
+
+      await Promise.all(
+        milestoneIds.map(async (milestoneId) => {
+          try {
+            const milestoneRef = doc(
+              db,
+              `projects/${projectId}/milestones/${milestoneId}`
+            );
+            const milestoneSnap = await getDoc(milestoneRef);
+            if (milestoneSnap.exists()) {
+              names[milestoneId] =
+                milestoneSnap.data().name || `Milestone ${milestoneId}`;
+            }
+          } catch (error) {
+            console.error("Error fetching milestone name:", error);
+            names[milestoneId] = `Milestone ${milestoneId}`;
+          }
+        })
+      );
+
+      setMilestoneNames((prev) => ({ ...prev, ...names }));
+    };
+
+    fetchMilestoneNames();
+  }, [tasks, projectId]);
+
+
   // ✅ FIXED: Remove the local task editing logic and dialog
   // Just call the parent's onEditTask function
   const handleEditTask = (task: Task) => {
@@ -274,9 +318,9 @@ const TaskList: React.FC<TaskListProps> = ({
   };
 
   const confirmHold = async () => {
-    console.log("🔄 HOLD: Starting confirmHold process");
-    console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
-    console.log("🔄 HOLD: holdReason:", holdReason);
+    // console.log("🔄 HOLD: Starting confirmHold process");
+    // console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
+    // console.log("🔄 HOLD: holdReason:", holdReason);
 
     if (!showHoldDialogFor || !holdReason.trim()) {
       console.log(
@@ -286,7 +330,7 @@ const TaskList: React.FC<TaskListProps> = ({
     }
 
     setRunningTimers((prev) => ({ ...prev, [showHoldDialogFor]: false }));
-    console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
+    // console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
 
     const task = tasks.find((t) => t.id === showHoldDialogFor);
     if (!task) {
@@ -294,15 +338,15 @@ const TaskList: React.FC<TaskListProps> = ({
       return;
     }
 
-    console.log("🔄 HOLD: Found task:", task.title);
+    // console.log("🔄 HOLD: Found task:", task.title);
 
     const totalSeconds = timers[showHoldDialogFor] || 0;
     const totalMinutes = Math.floor(totalSeconds / 60);
 
-    console.log("🔄 HOLD: Time calculation:");
-    console.log("  - Total seconds:", totalSeconds);
-    console.log("  - Total minutes:", totalMinutes);
-    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+    // console.log("🔄 HOLD: Time calculation:");
+    // console.log("  - Total seconds:", totalSeconds);
+    // console.log("  - Total minutes:", totalMinutes);
+    // console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
 
     const taskRef = doc(
       db,
@@ -314,7 +358,7 @@ const TaskList: React.FC<TaskListProps> = ({
       actualMinutes: totalMinutes,
     };
 
-    console.log("🔄 HOLD: Updating database with:", updateData);
+    // console.log("🔄 HOLD: Updating database with:", updateData);
 
     try {
       await updateDoc(taskRef, updateData);
@@ -653,7 +697,6 @@ const TaskList: React.FC<TaskListProps> = ({
                             };
                             
                             await updateDoc(taskRef, updateData);
-                            console.log("✅ APPROVED: Task updated");
 
                             // Update milestone progress
                             const tasksSnapshot = await getDocs(
@@ -920,6 +963,12 @@ const TaskList: React.FC<TaskListProps> = ({
                   chatTarget={chatTarget}
                   clientUid={clientUid}
                   designerUid={designerUid}
+                  taskName={selectedTask.title}
+                  milestoneName={
+                    selectedTask.milestoneName ||
+                    milestoneNames[selectedTask.milestoneId] ||
+                    `Milestone ${selectedTask.milestoneId}`
+                  }
                 />
               )}
             </div>
@@ -1026,10 +1075,10 @@ const TaskList: React.FC<TaskListProps> = ({
                       revisionReason.trim(),
                     ],
                   };
-                  
+
                   await updateDoc(taskRef, updateData);
                   console.log("✅ REVISION: Task updated", revisionReason);
-                  
+
                   // Update local state
                   onTaskUpdate({ ...selectedTask, ...updateData });
                 } catch (err) {

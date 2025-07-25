@@ -13,6 +13,9 @@ interface ChatInputProps {
   chatTarget: "admin-client" | "admin-designer";
   clientUid?: string | null;
   designerUid?: string | null;
+  taskName?: string;
+  milestoneName?: string;
+  adminUid?:string | null;
 }
 
 const ChatInput = ({
@@ -22,6 +25,9 @@ const ChatInput = ({
   chatTarget,
   clientUid,
   designerUid,
+  taskName,
+  milestoneName,
+  adminUid
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -44,7 +50,7 @@ const handleSendMessage = async () => {
   }
 
   const path = `projects/${projectId}/milestones/${milestoneId}/tasks/${taskId}/messages`;
-
+  
   try {
     // 1. Send the message
     const msgRef = await addDoc(collection(db, path), {
@@ -57,27 +63,31 @@ const handleSendMessage = async () => {
 
     // 2. Resolve recipient UID
     let recipientUid: string | null = null;
-    if (chatTarget === "admin-client") {
-      recipientUid = clientUid;
-    } else if (chatTarget === "admin-designer") {
-      recipientUid = designerUid;
-    }
-
-
+   if (userRole === "admin") {
+     // Admin sending to client or designer
+     recipientUid =
+       chatTarget === "admin-client" ? clientUid || null : designerUid || null;
+   } else {
+     // Client or designer sending to admin
+     recipientUid = adminUid || null;
+   }
+ 
     // 3. Send notification
-    if (recipientUid) {
-      const notifRef = await addDoc(
-        collection(db, `users/${recipientUid}/notifications`),
-        {
-          message: `You got a new message from ${user.displayName || "Admin"}`,
-          type: "chat",
-          read: false,
-          createdAt: serverTimestamp(),
-        }
-      );
-    } else {
-      console.warn("⚠️ No recipient UID found. Skipping notification.");
-    }
+   if (recipientUid) {
+     const notifRef = await addDoc(
+       collection(db, `users/${recipientUid}/notifications`),
+       {
+         message: `You got a new message from ${
+           user.displayName || "Admin"
+         } in task "${taskName}" (Milestone: ${milestoneName})`,
+         type: "chat",
+         read: false,
+         createdAt: serverTimestamp(),
+       }
+     );
+   } else {
+     console.warn("⚠️ No recipient UID found. Skipping notification.");
+   }
 
     setMessage("");
     textareaRef.current?.focus();

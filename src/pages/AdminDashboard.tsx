@@ -115,21 +115,45 @@ const AdminDashboard = () => {
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const projList = await Promise.all(
         snapshot.docs.map(async (doc) => {
-          const projectData = { id: doc.id, ...doc.data() };
-
+          const projectData = doc.data() as Project; // ✅ ADD THIS TYPE ASSERTION
           const milestonesSnap = await getDocs(
             collection(db, `projects/${doc.id}/milestones`)
           );
 
-          const milestones = milestonesSnap.docs.map((d) => d.data());
+          const milestones = milestonesSnap.docs
+            .map((d) => d.data())
+            .filter((m) => m.isDeleted !== true);
+
           const total = milestones.length;
           const completed = milestones.filter((m) => m.progress === 100).length;
 
           const projectProgress =
             total > 0 ? Math.round((completed / total) * 100) : 0;
 
+          if (projectProgress === 100 && projectData.status !== "Completed") {
+            await updateDoc(doc.ref, {
+              status: "Completed",
+              progress: 100,
+            });
+          } else if (
+            projectProgress < 100 &&
+            projectData.status === "Completed"
+          ) {
+            await updateDoc(doc.ref, {
+              status: "Active",
+              progress: projectProgress, 
+            });
+          } else if (projectProgress !== projectData.progress) {
+            await updateDoc(doc.ref, {
+              progress: projectProgress,
+            });
+          }
+
+
+
           return {
             ...projectData,
+            id: doc.id,
             progress: projectProgress,
           };
         })
@@ -139,6 +163,36 @@ const AdminDashboard = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // useEffect(() => {
+  //   const q = query(collection(db, "projects"), orderBy("createdDate", "desc"));
+  //   const unsubscribe = onSnapshot(q, async (snapshot) => {
+  //     const projList = await Promise.all(
+  //       snapshot.docs.map(async (doc) => {
+  //         const projectData = { id: doc.id, ...doc.data() };
+
+  //         const milestonesSnap = await getDocs(
+  //           collection(db, `projects/${doc.id}/milestones`)
+  //         );
+
+  //         const milestones = milestonesSnap.docs.map((d) => d.data()).filter((m) => m.isDeleted !== true);
+  //         const total = milestones.length;
+  //         const completed = milestones.filter((m) => m.progress === 100).length;
+
+  //         const projectProgress =
+  //           total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  //         return {
+  //           ...projectData,
+  //           progress: projectProgress,
+  //         };
+  //       })
+  //     );
+  //     setProjects(projList);
+  //   });
+
+  //   return () => unsubscribe();
+  // }, []);
 
   const updateStatus = async (projectId: string, status: string) => {
     const ref = doc(db, "projects", projectId);
