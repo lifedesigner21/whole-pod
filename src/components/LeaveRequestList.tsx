@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import LeaveRequestDialog from "./LeaveRequestDialog";
 import { format } from "date-fns";
 
 interface LeaveRequest {
@@ -96,7 +97,10 @@ const LeaveRequestList = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Leave Requests</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Leave Requests</CardTitle>
+          {userRole !== "admin" && <LeaveRequestDialog />}
+        </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {leaveRequests.length === 0 ? (
@@ -125,10 +129,14 @@ const LeaveRequestList = () => {
                   <td className="py-2 px-3 capitalize">{req.role}</td>
                   <td className="py-2 px-3">{req.leaveType}</td>
                   <td className="py-2 px-3">
-                    {format(new Date(req.leaveFrom), "dd MMM yyyy")}
+                    {req.leaveFrom
+                      ? format(new Date(req.leaveFrom), "dd MMM yyyy")
+                      : "N/A"}
                   </td>
                   <td className="py-2 px-3">
-                    {format(new Date(req.leaveTo), "dd MMM yyyy")}
+                    {req.leaveTo
+                      ? format(new Date(req.leaveTo), "dd MMM yyyy")
+                      : "N/A"}
                   </td>
                   <td className="py-2 px-3">{req.reason}</td>
                   <td className="py-2 px-3">

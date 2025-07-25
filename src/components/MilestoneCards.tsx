@@ -6,9 +6,10 @@ import {
   FileText,
   MessageSquare,
   Pencil,
+  Trash,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
+import { formatDate, syncPaidAmountFromInvoice } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
@@ -33,12 +34,16 @@ import {
   orderBy,
   query,
   addDoc,
+  updateDoc,
+  doc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import ChatInput from "./ChatInput";
 import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "./CreateMilestoneDialog";
+import { toast } from "@/hooks/use-toast";
+import Breadcrumb from "./BreadCrumb";
 
 interface Subtask {
   title: string;
@@ -65,6 +70,7 @@ interface Milestone {
   tasks: Task[];
   progress: number;
   projectName?: string;
+  clientId?: string;
 }
 
 interface MilestoneCardsProps {
@@ -93,7 +99,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   project,
   projectId,
   projectName,
-  onMilestoneCreated
+  onMilestoneCreated,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(
@@ -103,6 +109,9 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, any[]>>({});
+  const [pendingAmount, setPendingAmount] = useState("0");
+  const [paymentDueDate, setPaymentDueDate] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("Pending");
 
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -119,21 +128,69 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
     milestoneDialogRef.current?.openDialog(milestone);
   };
 
+  const handleDeleteMilestone = async (milestoneId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this Milestone?"
+    );
+    if (!confirmDelete) return;
+    try {
+      const milestoneRef = doc(
+        db,
+        "projects",
+        projectId,
+        "milestones",
+        milestoneId
+      );
+      await updateDoc(milestoneRef, { isDeleted: true });
+      onMilestoneCreated();
+      toast({
+        title: "Deleted",
+        description: "Milestone has been marked as deleted.",
+      });
+      console.log("Milestone deleted successfully");
+    } catch (error) {
+      console.error("Error deleting Milestone:", error);
+    }
+  };
+
   const handleSubmitInvoice = async () => {
     if (!selectedMilestone || !invoiceUrl.trim()) return;
+    // ✅ Regex-based URL validation
+    const urlRegex =
+      /^(https?:\/\/)([\w\-]+\.)+[\w\-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
+    if (!urlRegex.test(invoiceUrl.trim())) {
+      toast({
+        title: "Missing required fields",
+        description: "Please provide proper invoice url before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "invoiceUrls"), {
         url: invoiceUrl.trim(),
         milestoneId: selectedMilestone.id,
         milestoneName: selectedMilestone.name,
-        amount: selectedMilestone.amount,
         projectId,
         projectName: selectedMilestone.projectName || "Unknown Project",
+        clientId: selectedMilestone.clientId,
+        pendingAmount: Number(pendingAmount) || 0,
+        paymentDueDate,
+        status: paymentStatus,
         createdAt: new Date().toISOString(),
       });
+
+      // ✅ Call the sync function if the status is 'paid'
+      console.log("Invoice URL saved successfully");
+      if (paymentStatus === "Paid") {
+        await syncPaidAmountFromInvoice(projectId);
+      }
       setIsDialogOpen(false);
       setInvoiceUrl("");
+      setPaymentDueDate("");
+      setPendingAmount("0");
+      setPaymentStatus("Pending");
       setSelectedMilestone(null);
     } catch (error) {
       console.error("Error saving invoice URL:", error);
@@ -169,6 +226,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
 
   return (
     <>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {project.milestones.map((milestone) => {
           const isChatOpen = openChatId === milestone.id;
@@ -190,13 +248,22 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     </span>
 
                     {userRole !== "designer" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditMilestone(milestone)}
-                      >
-                        <Pencil className="w-4 h-4 text-muted-foreground" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditMilestone(milestone)}
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMilestone(milestone.id)}
+                        >
+                          <Trash className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardTitle>
@@ -241,7 +308,13 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     className="flex-1"
                     onClick={() =>
                       navigate(
-                        `/project/${projectId}/milestone/${milestone.id}`
+                        `/project/${projectId}/milestone/${milestone.id}`,
+                        {
+                          state: {
+                            milestoneName: milestone.name,
+                            projectName: projectName,
+                          },
+                        }
                       )
                     }
                   >
@@ -347,6 +420,33 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               disabled
               className="bg-gray-50"
             />
+            <Label htmlFor="invoice-url">Amount To Pay</Label>
+            <Input
+              id="amount-paid"
+              type="number"
+              placeholder="Enter amount to pay for the milestone"
+              value={pendingAmount}
+              onChange={(e) => setPendingAmount(e.target.value)}
+            />
+            <Label htmlFor="invoice-url">Payment Due</Label>
+            <Input
+              id="payment-due"
+              type="date"
+              value={paymentDueDate}
+              onChange={(e) => setPaymentDueDate(e.target.value)}
+            />
+            <Label>Payment Status</Label>
+            <select
+              value={paymentStatus}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setPaymentStatus(e.target.value)
+              }
+              className="w-full border rounded px-3 py-2 mt-1"
+              required={true}
+            >
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
             <Label htmlFor="invoice-url">Invoice URL</Label>
             <Input
               id="invoice-url"
@@ -354,6 +454,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               placeholder="https://example.com/invoice"
               value={invoiceUrl}
               onChange={(e) => setInvoiceUrl(e.target.value)}
+              required
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -375,7 +476,10 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         ref={milestoneDialogRef}
         projectId={projectId}
         projectName={projectName || project.name || ""}
-        onMilestoneCreated={() => {onMilestoneCreated?.(); setIsDialogOpen(false);}}
+        onMilestoneCreated={() => {
+          onMilestoneCreated?.();
+          setIsDialogOpen(false);
+        }}
       />
     </>
   );

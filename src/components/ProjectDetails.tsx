@@ -1,20 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  MessageSquare,
-  FileText,
-  TimerIcon,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle, TimerIcon } from "lucide-react";
 import { Project } from "@/data/mockData";
-import KanbanTasks from "./KanbanTasks";
-import CreateTaskDialog from "./CreateTaskDialogue";
 import {
   collection,
   collectionGroup,
@@ -28,6 +17,8 @@ import {
 import { db } from "@/lib/firebase";
 import { formatDate } from "@/lib/utils";
 import MilestoneCards from "./MilestoneCards";
+import { CreateMilestoneDialogRef } from "./CreateMilestoneDialog";
+import Breadcrumb from "./BreadCrumb";
 
 interface Task {
   id: string;
@@ -39,6 +30,7 @@ interface Task {
   estimatedHours: number;
   actualHours: number;
   assignedTo: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 interface ProjectDetailsProps {
@@ -50,6 +42,24 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientEmail, setClientEmail] = useState<string>("");
   const [milestones, setMilestones] = useState([]);
+
+  const milestoneDialogRef = useRef<CreateMilestoneDialogRef | null>(null);
+
+  const handleMilestoneCreated = async () => {
+    if (!project.id) return;
+    try {
+      const snapshot = await getDocs(
+        collection(db, "projects", project.id, "milestones")
+      );
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMilestones(data);
+    } catch (err) {
+      console.error("Error fetching milestones:", err);
+    }
+  };
 
   useEffect(() => {
     const q = query(
@@ -107,7 +117,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
   }, [project.id]);
 
   const completedTasks = tasks.filter(
-    (task) => task.status === "Completed"
+    (task) => task.status === "Completed" && task.isDeleted !== true
   ).length;
 
   return (
@@ -120,6 +130,13 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
         </Button>
       </div>
 
+      <Breadcrumb
+        paths={[
+          { name: project.name || "Unnamed Project" },
+          { name: "Milestones" },
+        ]}
+      />
+
       {/* Project Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Task Progress */}
@@ -131,10 +148,15 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
                 <span className="text-sm font-medium">Tasks Progress</span>
               </div>
               <p className="text-2xl font-bold">
-                {completedTasks}/{tasks.length}
+                {completedTasks}/
+                {tasks.filter((task) => !task.isDeleted).length}
               </p>
               <Progress
-                value={(completedTasks / (tasks.length || 1)) * 100}
+                value={
+                  (completedTasks /
+                    (tasks.filter((task) => !task.isDeleted).length || 1)) *
+                  100
+                }
                 className="h-2 mt-2"
               />
 
@@ -227,9 +249,11 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
       </div>
 
       <MilestoneCards
-        project={{ milestones }}
+        project={{ milestones: milestones.filter((m) => m.isDeleted !== true) }}
         projectId={project.id}
         projectName={project.name}
+        milestoneDialogRef={milestoneDialogRef}
+        onMilestoneCreated={handleMilestoneCreated}
       />
     </div>
   );

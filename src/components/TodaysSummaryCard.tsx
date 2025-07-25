@@ -19,7 +19,6 @@ const TodaysSummaryCard: React.FC<TodaysSummaryCardProps> = ({
   pendingFeedback,
   totalRevisions,
 }) => {
-  console.log("Task Stats:", taskStats);
   return (
     <Card>
       <CardHeader>

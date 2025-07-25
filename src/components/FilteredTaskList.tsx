@@ -16,11 +16,18 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import CreateSubtaskDialog from "./CreateSubTasiDialog";
-import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { formatDate } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 interface Subtask {
   name: string;
@@ -37,6 +44,7 @@ interface Task {
   id: string;
   title: string;
   description: string;
+  startDate: string;
   dueDate: string;
   estimatedHours: number;
   priority: string;
@@ -52,6 +60,9 @@ interface Task {
   revisionReasons?: string[];
   estimatedMinutes?: number;
   completedProof?: string;
+  startedAt?: string;
+  isDeleted?: boolean; // New field to mark deletion
+  isApproved?: boolean
 }
 
 interface FilteredTaskListProps {
@@ -99,40 +110,58 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Filter tasks by status and type
-  const completedTasks = tasks.filter((task) => task.status === "Completed");
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed" && task.isDeleted !== true
+  );
 
   const revisionTasks = tasks.filter(
-    (task) => task.isRevision && task.status !== "Completed"
+    (task) =>
+      task.isRevision && task.status !== "Completed" && task.isDeleted !== true
   );
 
   const newTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed")
+    if (
+      !task.createdAt ||
+      task.isRevision ||
+      task.status === "Completed" ||
+      task.isDeleted === true
+    )
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate === today;
   });
 
   const pendingTasks = tasks.filter((task) => {
-    if (!task.createdAt || task.isRevision || task.status === "Completed")
+    if (
+      !task.createdAt ||
+      task.isRevision ||
+      task.status === "Completed" ||
+      task.isDeleted === true
+    )
       return false;
     const createdDate = format(new Date(task.createdAt), "yyyy-MM-dd");
     return createdDate < today;
   });
 
   useEffect(() => {
-    console.log("🔄 INIT: Initializing timers from tasks");
     const initialTimers: Record<string, number> = {};
+
     tasks.forEach((task) => {
-      if (task.actualMinutes && task.actualMinutes > 0) {
-        initialTimers[task.id] = task.actualMinutes * 60;
-        console.log(
-          `🔄 INIT: Task ${task.id} (${task.title}) has ${
-            task.actualMinutes
-          } minutes (${task.actualMinutes * 60} seconds)`
-        );
+      let totalSeconds = (task.actualMinutes || 0) * 60;
+
+      if (task.startedAt && !task.onHoldReason && task.status !== "Completed") {
+        const startedAt = new Date(task.startedAt).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.floor((now - startedAt) / 1000);
+        totalSeconds += diffSeconds;
+
+        // Also mark this task as running
+        setRunningTimers((prev) => ({ ...prev, [task.id]: true }));
       }
+
+      initialTimers[task.id] = totalSeconds;
     });
-    console.log("🔄 INIT: Initial timers:", initialTimers);
+
     setTimers(initialTimers);
   }, [tasks]);
 
@@ -182,7 +211,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   }, [tasks]);
 
   useEffect(() => {
-    console.log("🔄 TIMER: Timer effect running");
+    // console.log("🔄 TIMER: Timer effect running");
     const interval = setInterval(() => {
       setTimers((prev) => {
         const updated = { ...prev };
@@ -194,13 +223,13 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
             hasRunningTimer = true;
 
             // Log every 10 seconds to avoid spam
-            if (updated[taskId] % 10 === 0) {
-              console.log(
-                `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
-                  updated[taskId] / 60
-                )}:${String(updated[taskId] % 60).padStart(2, "0")}`
-              );
-            }
+            // if (updated[taskId] % 10 === 0) {
+            //   console.log(
+            //     `⏱️ TIMER: Task ${taskId} running for ${Math.floor(
+            //       updated[taskId] / 60
+            //     )}:${String(updated[taskId] % 60).padStart(2, "0")}`
+            //   );
+            // }
           }
         }
 
@@ -209,13 +238,28 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     }, 1000);
 
     return () => {
-      console.log("🔄 TIMER: Timer cleanup");
+      // console.log("🔄 TIMER: Timer cleanup");
       clearInterval(interval);
     };
   }, [runningTimers]);
 
-  const handleStart = (taskId: string) => {
-    setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+  const handleStart = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const taskRef = doc(
+      db,
+      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    );
+
+    try {
+      await updateDoc(taskRef, {
+        startedAt: new Date().toISOString(),
+      });
+      setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+    } catch (err) {
+      console.error("❌ Failed to start timer:", err);
+    }
   };
 
   const handleHold = (taskId: string) => {
@@ -223,9 +267,9 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   };
 
   const confirmHold = async () => {
-    console.log("🔄 HOLD: Starting confirmHold process");
-    console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
-    console.log("🔄 HOLD: holdReason:", holdReason);
+    // console.log("🔄 HOLD: Starting confirmHold process");
+    // console.log("🔄 HOLD: showHoldDialogFor:", showHoldDialogFor);
+    // console.log("🔄 HOLD: holdReason:", holdReason);
 
     if (!showHoldDialogFor || !holdReason.trim()) {
       console.log(
@@ -235,7 +279,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     }
 
     setRunningTimers((prev) => ({ ...prev, [showHoldDialogFor]: false }));
-    console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
+    // console.log("🔄 HOLD: Timer stopped for task:", showHoldDialogFor);
 
     const task = tasks.find((t) => t.id === showHoldDialogFor);
     if (!task) {
@@ -243,15 +287,15 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
       return;
     }
 
-    console.log("🔄 HOLD: Found task:", task.title);
+    // console.log("🔄 HOLD: Found task:", task.title);
 
     const totalSeconds = timers[showHoldDialogFor] || 0;
     const totalMinutes = Math.floor(totalSeconds / 60);
 
-    console.log("🔄 HOLD: Time calculation:");
-    console.log("  - Total seconds:", totalSeconds);
-    console.log("  - Total minutes:", totalMinutes);
-    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+    // console.log("🔄 HOLD: Time calculation:");
+    // console.log("  - Total seconds:", totalSeconds);
+    // console.log("  - Total minutes:", totalMinutes);
+    // console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
 
     const taskRef = doc(
       db,
@@ -261,13 +305,14 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     const updateData = {
       onHoldReason: holdReason.trim(),
       actualMinutes: totalMinutes,
+      startedAt: null,
     };
 
-    console.log("🔄 HOLD: Updating database with:", updateData);
-    console.log(
-      "🔄 HOLD: Database path:",
-      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-    );
+    // console.log("🔄 HOLD: Updating database with:", updateData);
+    // console.log(
+    //   "🔄 HOLD: Database path:",
+    //   `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    // );
 
     try {
       await updateDoc(taskRef, updateData);
@@ -286,9 +331,9 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   };
 
   const confirmComplete = async () => {
-    console.log("🎯 COMPLETE: Starting confirmComplete process");
-    console.log("🎯 COMPLETE: showCompleteDialogFor:", showCompleteDialogFor);
-    console.log("🎯 COMPLETE: proofUrl:", proofUrl);
+    // console.log("🎯 COMPLETE: Starting confirmComplete process");
+    // console.log("🎯 COMPLETE: showCompleteDialogFor:", showCompleteDialogFor);
+    // console.log("🎯 COMPLETE: proofUrl:", proofUrl);
 
     if (!showCompleteDialogFor || !proofUrl.trim()) {
       console.log(
@@ -298,7 +343,7 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     }
 
     setRunningTimers((prev) => ({ ...prev, [showCompleteDialogFor]: false }));
-    console.log("🎯 COMPLETE: Timer stopped for task:", showCompleteDialogFor);
+    // console.log("🎯 COMPLETE: Timer stopped for task:", showCompleteDialogFor);
 
     const task = tasks.find((t) => t.id === showCompleteDialogFor);
     if (!task) {
@@ -309,15 +354,15 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
       return;
     }
 
-    console.log("🎯 COMPLETE: Found task:", task.title);
+    // console.log("🎯 COMPLETE: Found task:", task.title);
 
     const totalSeconds = timers[showCompleteDialogFor] || 0;
     const totalMinutes = Math.floor(totalSeconds / 60);
 
-    console.log("🎯 COMPLETE: Time calculation:");
-    console.log("  - Total seconds:", totalSeconds);
-    console.log("  - Total minutes:", totalMinutes);
-    console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
+    // console.log("🎯 COMPLETE: Time calculation:");
+    // console.log("  - Total seconds:", totalSeconds);
+    // console.log("  - Total minutes:", totalMinutes);
+    // console.log("  - Previous actualMinutes:", task.actualMinutes || 0);
 
     const taskRef = doc(
       db,
@@ -328,13 +373,14 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
       actualMinutes: totalMinutes,
       status: "Completed",
       completedProof: proofUrl.trim(),
+      startedAt: null,
     };
 
-    console.log("🎯 COMPLETE: Updating task with:", updateData);
-    console.log(
-      "🎯 COMPLETE: Database path:",
-      `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
-    );
+    // console.log("🎯 COMPLETE: Updating task with:", updateData);
+    // console.log(
+    //   "🎯 COMPLETE: Database path:",
+    //   `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+    // );
 
     try {
       await updateDoc(taskRef, updateData);
@@ -360,25 +406,25 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
         (doc) => doc.data().status === "Completed"
       ).length;
 
-      console.log("🎯 COMPLETE: Progress calculation:");
-      console.log("  - Total tasks:", totalTasks);
-      console.log("  - Completed tasks:", completedTasks);
+      // console.log("🎯 COMPLETE: Progress calculation:");
+      // console.log("  - Total tasks:", totalTasks);
+      // console.log("  - Completed tasks:", completedTasks);
 
       const progress =
         totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-      console.log("  - Calculated progress:", progress + "%");
+      // console.log("  - Calculated progress:", progress + "%");
 
       const milestoneRef = doc(
         db,
         `projects/${task.projectId}/milestones/${task.milestoneId}`
       );
 
-      console.log("🎯 COMPLETE: Updating milestone progress...");
-      console.log(
-        "🎯 COMPLETE: Milestone path:",
-        `projects/${task.projectId}/milestones/${task.milestoneId}`
-      );
+      // console.log("🎯 COMPLETE: Updating milestone progress...");
+      // console.log(
+      //   "🎯 COMPLETE: Milestone path:",
+      //   `projects/${task.projectId}/milestones/${task.milestoneId}`
+      // );
 
       await updateDoc(milestoneRef, { progress });
       console.log("✅ COMPLETE: Milestone progress updated successfully");
@@ -418,17 +464,17 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
   };
 
   const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case "High":
-      return "bg-red-100 text-red-800";
-    case "Medium":
-      return "bg-yellow-100 text-yellow-800";
-    case "Low":
-      return "bg-green-100 text-green-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
+    switch (priority) {
+      case "High":
+        return "bg-red-100 text-red-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   const renderTasks = (
     taskList: Task[],
@@ -443,7 +489,11 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 {task.title}
-                <span className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${task.priority}`}>
+                <span
+                  className={`text-xs rounded-full px-2 py-1 bg-gray-100 text-gray-700 ${getPriorityColor(
+                    task.priority
+                  )}`}
+                >
                   {task.priority}
                 </span>
               </CardTitle>
@@ -467,7 +517,11 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    <span>Due: {task.dueDate}</span>
+                    <span>Start: {task.startDate}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>End: {formatDate(task.dueDate)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -504,7 +558,18 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                                 status === task.status ? "default" : "ghost"
                               }
                               className="w-full justify-start text-left"
-                              onClick={() => {onStatusChange(task.id, status); setOpenPopoverId(null);}}
+                              onClick={() => {
+                                if (!runningTimers[task.id]) {
+                                  toast({
+                                    title: "Invalid Operation",
+                                    description: "Please start the timer.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                onStatusChange(task.id, status);
+                                setOpenPopoverId(null);
+                              }}
                             >
                               {status}
                             </Button>
@@ -517,6 +582,19 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
                       </span>
                     )}
                   </div>
+                  {task.isApproved === true && (
+                    <div className="text-sm text-green-600 mt-2">
+                      <span className="font-semibold font-italic">
+                        Approved{" "}
+                      </span>
+                    </div>
+                  )}
+                  {task.onHoldReason && task.status !== "Completed" && (
+                    <div className="text-sm text-yellow-600 mt-2">
+                      <span className="font-semibold">Hold Reason :</span>{" "}
+                      {task.onHoldReason}
+                    </div>
+                  )}
                   {task.isRevision && (
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4" />

@@ -26,6 +26,7 @@ interface Task {
   description: string;
   priority: "High" | "Medium" | "Low";
   status: string;
+  startDate:string;
   dueDate: string;
   assignedTo: string;
   projectId: string;
@@ -33,6 +34,7 @@ interface Task {
   assignedToName: string;
   projectName?: string;
   milestoneName?: string;
+  isDeleted?: boolean; // New field to mark deletion
 }
 
 const priorityOrder = {
@@ -70,7 +72,12 @@ const TopPriorityTasks = () => {
       async (snapshot) => {
         const fetched = snapshot.docs
           .map((doc) => ({ id: doc.id, ...(doc.data() as Task) }))
-          .filter((task) => task.assignedTo === user.uid);
+          .filter(
+            (task) =>
+              task.assignedTo === user.uid &&
+              task.status !== "Completed" &&
+              task.isDeleted !== true
+          );
 
         // Sort by priority
         const sorted = fetched.sort(
@@ -142,8 +149,12 @@ const TopPriorityTasks = () => {
       )
     );
 
-    const totalTasks = tasksSnapshot.size;
-    const completedTasks = tasksSnapshot.docs.filter(
+    const visibleTasks = tasksSnapshot.docs.filter(
+      (doc) => doc.data().isDeleted !== true
+    );
+
+    const totalTasks = visibleTasks.length;
+    const completedTasks = visibleTasks.filter(
       (doc) => doc.data().status === "Completed"
     ).length;
 
@@ -162,8 +173,6 @@ const TopPriorityTasks = () => {
     );
   };
 
-  if (tasks.length === 0) return null;
-
   return (
     <Card>
       <CardHeader>
@@ -172,83 +181,62 @@ const TopPriorityTasks = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="border p-4 rounded-lg bg-white shadow-sm"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-semibold text-lg text-gray-900">
-                  {task.title}
-                </h3>
-
-                <span
-                  className={`text-xs px-2 py-1 rounded-full font-semibold ${getPriorityColor(
-                    task.priority
-                  )}`}
-                >
-                  {task.priority}
-                </span>
+        {tasks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="border p-4 rounded-lg bg-white shadow-sm cursor-pointer hover:bg-gray-50 transition"
+                onClick={() => navigate("/my-workboard")}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-semibold text-lg text-gray-900">
+                    {task.title}
+                  </h3>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-semibold ${getPriorityColor(
+                      task.priority
+                    )}`}
+                  >
+                    {task.priority}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 mb-2">
+                  Desc: {task.description}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Project:{" "}
+                  <span className="font-medium">{task.projectName}</span>
+                </p>
+                <p className="text-sm text-gray-500">
+                  Milestone:{" "}
+                  <span className="font-medium">{task.milestoneName}</span>
+                </p>
+                <p className="text-sm text-gray-500">
+                  Designer: {task.assignedToName}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Start: {formatDate(task.startDate)}
+                </p>
+                <p className="text-sm text-gray-500">
+                  End: {formatDate(task.dueDate)}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-medium">Status: {task.status}</span>
+                </div>
               </div>
-              <p className="text-sm text-gray-700 mb-2">
-                Desc: {task.description}
-              </p>
-              <p className="text-sm text-gray-500">
-                Project: <span className="font-medium">{task.projectName}</span>
-              </p>
-              <p className="text-sm text-gray-500">
-                Milestone:{" "}
-                <span className="font-medium">{task.milestoneName}</span>
-              </p>
-              <p className="text-sm text-gray-500">
-                Designer: {task.assignedToName}
-              </p>
-              <p className="text-sm text-gray-500">
-                Due: {formatDate(task.dueDate)}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-medium">Status:</span>
-                <Popover
-                  open={openPopoverId === task.id}
-                  onOpenChange={(open) =>
-                    setOpenPopoverId(open ? task.id : null)
-                  }
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                    >
-                      {task.status}
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-2 w-[150px]">
-                    {statusOptions.map((status) => (
-                      <Button
-                        key={status}
-                        variant={status === task.status ? "default" : "ghost"}
-                        className="w-full justify-start text-left"
-                        onClick={() => {onStatusChange(task.id, status); setOpenPopoverId(null);}}
-                      >
-                        {status}
-                      </Button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm mb-4">No tasks available.</p>
+        )}
 
         <div className="text-right">
           <button
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-sm text-white bg-black p-2 m-2 rounded-md font-medium"
             onClick={() => navigate("/my-workboard")}
           >
-            View More →
+            My Workboard
           </button>
         </div>
       </CardContent>

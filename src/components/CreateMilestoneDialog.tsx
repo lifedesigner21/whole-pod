@@ -107,28 +107,36 @@ const CreateMilestoneDialog = forwardRef<
     useEffect(() => {
       const fetchUsers = async () => {
         try {
-          const [designerSnap, clientSnap] = await Promise.all([
+          const [designerSnap, clientSnap, allowedSnap] = await Promise.all([
             getDocs(
               query(collection(db, "users"), where("role", "==", "designer"))
             ),
             getDocs(
               query(collection(db, "users"), where("role", "==", "client"))
             ),
+            getDocs(collection(db, "allowedUsers")),
           ]);
 
-          setDesigners(
-            designerSnap.docs.map((doc) => ({
-              id: doc.id,
-              name: doc.data().name,
-            }))
+          const allowedEmails = new Set(
+            allowedSnap.docs.map((doc) => doc.data().email?.toLowerCase())
           );
 
-          setClients(
-            clientSnap.docs.map((doc) => ({
+          const filteredDesigners = designerSnap.docs
+            .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+            .map((doc) => ({
               id: doc.id,
-              name: doc.data().name,
-            }))
-          );
+              name: doc.data().name || "Unnamed",
+            }));
+
+          const filteredClients = clientSnap.docs
+            .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+            .map((doc) => ({
+              id: doc.id,
+              name: doc.data().name || "Unnamed",
+            }));
+
+          setDesigners(filteredDesigners);
+          setClients(filteredClients);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
@@ -201,6 +209,9 @@ const CreateMilestoneDialog = forwardRef<
         return;
       }
 
+      // ✅ Declare this here
+      const selectedClient = clients.find((c) => c.id === clientId);
+
       try {
         // Create a clean data object without undefined values
         const milestoneData = {
@@ -208,7 +219,7 @@ const CreateMilestoneDialog = forwardRef<
           description: description || "",
           podDesigner: form.podDesigner || "",
           podDesignerId: podDesignerId || "",
-          client: form.client || "",
+          client: selectedClient?.name || form.client || "",
           clientId: clientId || "",
           startDate: startDate || "",
           endDate: endDate || "",
@@ -219,6 +230,7 @@ const CreateMilestoneDialog = forwardRef<
           progress: 0,
           createdAt: Timestamp.now(),
           tasks: [],
+          isDeleted: false, // New field to mark deletion
         };
 
         if (isEdit && form.id) {
@@ -255,7 +267,6 @@ const CreateMilestoneDialog = forwardRef<
           onMilestoneCreated?.();
 
           toast({ title: "Milestone created successfully" });
-          console.log("Milestone saved. Closing dialog.");
         }
 
         setOpen(false);
@@ -268,7 +279,7 @@ const CreateMilestoneDialog = forwardRef<
 
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isEdit ? "Edit Milestone" : "Create Milestone"}

@@ -9,6 +9,7 @@ import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "@/components/CreateMilestoneDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import Breadcrumb from "@/components/BreadCrumb";
 
 const AdminProjectDetails = () => {
   const { projectId } = useParams();
@@ -91,11 +92,14 @@ const AdminProjectDetails = () => {
       />
 
       <h2 className="text-xl font-semibold">Project: {project.name}</h2>
-      <p className="text-sm text-gray-600">{project.brief}</p>
+      {/* <p className="text-sm text-gray-600">{project.brief}</p> */}
 
       {/* Milestone Cards */}
       <MilestoneCards
-        project={{ milestones, name: project.name }}
+        project={{
+          milestones: milestones.filter((milestone) => !milestone.isDeleted),
+          name: project.name,
+        }}
         projectId={project.id}
         projectName={project.name}
         milestoneDialogRef={milestoneRef}
