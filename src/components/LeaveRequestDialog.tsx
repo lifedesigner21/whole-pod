@@ -116,7 +116,7 @@ const LeaveRequestDialog = () => {
           <CalendarDays />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-sm sm:max-w-md mx-2 sm:mx-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Request Leave
@@ -133,6 +133,8 @@ const LeaveRequestDialog = () => {
               value={leaveTitle}
               onChange={(e) => setLeaveTitle(e.target.value)}
               placeholder="Leave for medical reason"
+              required={true}
+              className="text-sm py-2 my-2"
             />
             {errors.leaveTitle && (
               <p className="text-xs text-red-500 mt-1">{errors.leaveTitle}</p>
@@ -161,6 +163,8 @@ const LeaveRequestDialog = () => {
                 type="date"
                 value={leaveFrom}
                 onChange={(e) => setLeaveFrom(e.target.value)}
+                required={true}
+                className="text-sm py-2"
               />
               {errors.leaveFrom && (
                 <p className="text-xs text-red-500 mt-1">{errors.leaveFrom}</p>
@@ -172,6 +176,8 @@ const LeaveRequestDialog = () => {
                 type="date"
                 value={leaveTo}
                 onChange={(e) => setLeaveTo(e.target.value)}
+                required={true}
+                className="text-sm py-2"
               />
               {errors.leaveTo && (
                 <p className="text-xs text-red-500 mt-1">{errors.leaveTo}</p>

@@ -70,6 +70,7 @@ const TasksPage: React.FC = () => {
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [milestoneName, setMilestoneName] = useState<string | null>(null);
+  const [adminUid, setAdminUid] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +84,7 @@ const TasksPage: React.FC = () => {
         setProjectName(projectData.name);
         setClientUid(projectData.clientId || null);
         setDesignerUid(projectData.designerId || null);
+        setAdminUid(projectData.projectCreatedBy || null);
       }
 
       // Fetch Milestone
@@ -388,6 +390,7 @@ const TasksPage: React.FC = () => {
                   milestoneId={milestoneId!}
                   taskId={selectedTask.id}
                   chatTarget={chatTarget}
+                  adminUid={adminUid}
                   clientUid={clientUid}
                   designerUid={designerUid}
                 />
