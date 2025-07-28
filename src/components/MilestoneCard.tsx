@@ -36,12 +36,19 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
   const subtaskCount = milestone.tasks?.length ?? 0;
   const revisionsUsed = milestone.revisionsUsed ?? 0;
   const [openChat, setOpenChat] = useState(false);
-  const [chatTarget, setChatTarget] = useState<"admin-client" | "admin-designer" | null>(null);
+  const [chatTarget, setChatTarget] = useState<
+    "admin-client" | "admin-designer" | null
+  >(null);
 
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  const messages = useChatMessages(projectId, milestone.id, undefined, chatTarget);
+  const messages = useChatMessages(
+    projectId,
+    milestone.id,
+    undefined,
+    chatTarget
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -74,7 +81,9 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
   const handleOpenChat = () => {
     if (userRole === "admin") {
       // Let admin choose chat target
-      const choice = window.prompt("Type '1' for Client Chat or '2' for Designer Chat");
+      const choice = window.prompt(
+        "Type '1' for Client Chat or '2' for Designer Chat"
+      );
       if (choice === "1") {
         setChatTarget("admin-client");
         setOpenChat(true);
@@ -103,9 +112,9 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
               <Badge className={getStatusColor(milestone.status)}>
                 {milestone.status}
               </Badge>
-              <Badge className={getPaymentStatusColor(milestone.paymentStatus)}>
+              {/* <Badge className={getPaymentStatusColor(milestone.paymentStatus)}>
                 ₹{(milestone.amount ?? 0).toLocaleString()}
-              </Badge>
+              </Badge> */}
             </div>
           </div>
           <p className="text-gray-600 text-sm mt-2">{milestone.description}</p>
@@ -116,7 +125,8 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>
-                Start: {milestone.startDate ? formatDate(milestone.startDate) : "N/A"}
+                Start:{" "}
+                {milestone.startDate ? formatDate(milestone.startDate) : "N/A"}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -128,6 +138,10 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
             <div className="flex items-center gap-2">
               <User className="w-4 h-4" />
               <span>{milestone.podDesigner}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ListChecks className="w-4 h-4" />
+              <span>Amount: ₹{(milestone.amount ?? 0).toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-2">
               <ListChecks className="w-4 h-4" />

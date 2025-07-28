@@ -69,6 +69,7 @@ const AdminDashboard = () => {
   const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
    const [expanded, setExpanded] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -142,15 +143,13 @@ const AdminDashboard = () => {
           ) {
             await updateDoc(doc.ref, {
               status: "Active",
-              progress: projectProgress, 
+              progress: projectProgress,
             });
           } else if (projectProgress !== projectData.progress) {
             await updateDoc(doc.ref, {
               progress: projectProgress,
             });
           }
-
-
 
           return {
             ...projectData,
@@ -262,6 +261,10 @@ const AdminDashboard = () => {
     (sum, p) => sum + (p.totalAmount - p.paidAmount),
     0
   );
+
+  const visibleProjects = showAll
+    ? filteredProjects
+    : filteredProjects.slice(0, 4);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -449,7 +452,7 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredProjects.map((project) => (
+            {visibleProjects.map((project) => (
               <div
                 key={project.id}
                 className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -596,12 +599,27 @@ const AdminDashboard = () => {
                 )}
               </div>
             ))}
+            {filteredProjects.length > 4 && (
+              <div className="text-center pt-4">
+                <button
+                  className="text-blue-600 hover:underline font-medium"
+                  onClick={() => setShowAll((prev) => !prev)}
+                >
+                  {showAll ? "View Less" : "View More"}
+                </button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
       {/* Allowed users list component */}
 
-      <Accordion type="single" collapsible className="border rounded-md">
+      <Accordion
+        type="single"
+        collapsible
+        className="border rounded-md"
+        defaultValue="allowed-users" // ✅ This opens it by default
+      >
         <AccordionItem value="allowed-users">
           <AccordionTrigger className="no-underline hover:no-underline focus:no-underline ml-2 font-bold text-lg">
             Allowed Users
@@ -611,7 +629,6 @@ const AdminDashboard = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-
       <LeaveRequestList />
     </div>
   );
