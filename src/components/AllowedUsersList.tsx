@@ -31,6 +31,7 @@ const AllowedUsersList = () => {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<AllowedUser | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -46,6 +47,8 @@ const AllowedUsersList = () => {
 
     return () => unsubscribe();
   }, []);
+
+  const visibleUsers = showAll ? users : users.slice(0, 5);
 
   const handleDelete = async () => {
     if (!deleteUserId) return;
@@ -77,7 +80,7 @@ const AllowedUsersList = () => {
           {users.length === 0 && (
             <p className="text-sm text-gray-500">No users added yet.</p>
           )}
-          {users.map((user) => (
+          {visibleUsers.map((user) => (
             <div
               key={user.id}
               className="grid  md:grid-cols-5 items-center gap-4 p-3 border rounded"
@@ -134,6 +137,16 @@ const AllowedUsersList = () => {
               </div>
             </div>
           ))}
+          {users.length > 5 && (
+            <div className="text-center pt-2">
+              <button
+                className="text-blue-600 hover:underline font-medium text-sm"
+                onClick={() => setShowAll((prev) => !prev)}
+              >
+                {showAll ? "View Less" : "View More"}
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

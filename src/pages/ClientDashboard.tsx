@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ProjectCard from "@/components/ProjectCard";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import {
   mockNotifications,
@@ -23,8 +30,24 @@ const ClientDashboard = () => {
   const [unpaidInvoices, setUnpaidInvoices] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(
+      collection(db, `users/${user.uid}/notifications`),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setUnreadNotifications(data);
+      }
+    );
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -124,6 +147,8 @@ const ClientDashboard = () => {
     navigate(`/client/project/${projectId}`);
   };
 
+  const unreadCount = unreadNotifications.filter((n) => !n.read).length;
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div>
@@ -162,6 +187,12 @@ const ClientDashboard = () => {
               {completedProjects}
             </p>
             <p className="text-sm text-gray-600">Completed Projects</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-2xl font-bold text-yellow-600">{unreadCount}</p>
+            <p className="text-sm text-gray-600">Unread Notifications</p>
           </CardContent>
         </Card>
         {/* <Card>

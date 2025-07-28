@@ -65,23 +65,24 @@ const AdminProjectDetails = () => {
 
   return (
     <div className="p-6 space-y-4">
-      {/* Back Button */}
-      <Button variant="outline" onClick={() => navigate("/dashboard")}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Dashboard
-      </Button>
+      <div className="flex justify-between items-center mb-6">
+        {/* Back Button */}
+        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        {/* Create Milestone Button */}
+        {userRole !== "designer" && (
+          <Button
+            className="flex items-center"
+            onClick={() => milestoneRef.current?.openDialog()}
+          >
+            + Add Milestone
+          </Button>
+        )}
+      </div>
 
       <Breadcrumb paths={[{ name: project.name }, { name: "Milestones" }]} />
-
-      {/* Create Milestone Button */}
-      {userRole !== "designer" && (
-        <Button
-          className="flex items-center"
-          onClick={() => milestoneRef.current?.openDialog()}
-        >
-          + Add Milestone
-        </Button>
-      )}
 
       {/* Create/Edit Milestone Dialog */}
       <CreateMilestoneDialog

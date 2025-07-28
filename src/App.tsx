@@ -22,6 +22,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import TasksPage from "./components/client/TaskPage";
 import InvoiceDashboard from "./components/InvoiceAndPayment";
 import Users from "./components/UsersList";
+import { useWarnOnTabCloseOnly } from "./hooks/useWarnOnTabCloseOnly";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,9 @@ const DashboardRouter = () => {
 
 const AppContent = () => {
   const { user } = useAuth();
+
+  // 👇 This enables tab/window close confirmation
+  useWarnOnTabCloseOnly();
 
   return (
     <BrowserRouter>

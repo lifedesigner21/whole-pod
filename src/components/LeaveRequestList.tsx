@@ -34,6 +34,7 @@ interface LeaveRequest {
 const LeaveRequestList = () => {
   const { user, userRole } = useAuth();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -45,7 +46,18 @@ const LeaveRequestList = () => {
               id: doc.id,
               ...doc.data(),
             })) as LeaveRequest[];
-            setLeaveRequests(data);
+
+            // ✅ Sort: requested & pending first, then approved & rejected
+            const sortedData = data.sort((a, b) => {
+              const order = {
+                Pending: 1,
+                Approved: 2,
+                Rejected: 3,
+              };
+              return (order[a.status] ?? 99) - (order[b.status] ?? 99);
+            });
+
+            setLeaveRequests(sortedData);
           })
         : onSnapshot(
             collection(db, `users/${user.uid}/leaveRequests`),
@@ -54,12 +66,25 @@ const LeaveRequestList = () => {
                 id: doc.id,
                 ...doc.data(),
               })) as LeaveRequest[];
-              setLeaveRequests(data);
+
+              // ✅ Sort user-specific leaves
+              const sortedData = data.sort((a, b) => {
+                const order = {
+                  Pending: 1,
+                  Approved: 2,
+                  Rejected: 3,
+                };
+                return (order[a.status] ?? 99) - (order[b.status] ?? 99);
+              });
+
+              setLeaveRequests(sortedData);
             }
           );
 
     return () => unsub();
   }, [user, userRole]);
+
+  const visibleRequests = showAll ? leaveRequests : leaveRequests.slice(0, 5);
 
   const notifyLeaveStatusChange = async (
     userId: string,
@@ -123,7 +148,7 @@ const LeaveRequestList = () => {
               </tr>
             </thead>
             <tbody>
-              {leaveRequests.map((req) => (
+              {visibleRequests.map((req) => (
                 <tr key={req.id} className="border-b hover:bg-gray-50">
                   <td className="py-2 px-3">{req.requestedBy}</td>
                   <td className="py-2 px-3 capitalize">{req.role}</td>
@@ -191,6 +216,23 @@ const LeaveRequestList = () => {
                 </tr>
               ))}
             </tbody>
+            {leaveRequests.length > 5 && (
+              <tfoot>
+                <tr>
+                  <td
+                    colSpan={userRole === "admin" ? 9 : 8}
+                    className="text-center py-3"
+                  >
+                    <button
+                      onClick={() => setShowAll((prev) => !prev)}
+                      className="text-blue-600 hover:underline text-sm font-medium"
+                    >
+                      {showAll ? "View Less" : "View More"}
+                    </button>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         )}
       </CardContent>
