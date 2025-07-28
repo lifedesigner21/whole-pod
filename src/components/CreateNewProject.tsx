@@ -90,7 +90,15 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
   const handleSubmit = async () => {
     // ✅ Validate required fields before proceeding
-    if (!form.name || !form.clientId || !form.designerId || !form.totalAmount) {
+    if (
+      !form.name ||
+      !form.clientId ||
+      !form.designerId ||
+      !form.totalAmount ||
+      !form.brief ||
+      !form.startDate ||
+      !form.endDate
+    ) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields before submitting.",
@@ -98,11 +106,42 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
       });
       return;
     }
+
+    // invalid start/end dates
+    const start = new Date(form.startDate);
+    const end = new Date(form.endDate);
+    if (start > end) {
+      toast({
+        title: "Invalid Date Range",
+        description: "Start date cannot be after end date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Negative or illogical financial amounts
+    if (Number(form.totalAmount) < 0 || Number(form.paidAmount) < 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Amounts cannot be negative.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (Number(form.paidAmount) > Number(form.totalAmount)) {
+      toast({
+        title: "Invalid Payment",
+        description: "Paid amount cannot exceed total amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const project = {
       ...form,
       totalAmount: Number(form.totalAmount),
       paidAmount: mode === "edit" ? Number(form.paidAmount) : 0,
-      projectCreatedBy:user.uid
+      projectCreatedBy: user.uid,
     };
 
     try {
@@ -125,7 +164,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           milestones: [],
           paidAmount: project.paidAmount,
           isDeleted: false,
-          projectCreatedBy:user.uid
+          projectCreatedBy: user.uid,
         });
 
         // 🔔 Notifications
@@ -309,14 +348,14 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-gray-700 ">
               Project Brief
             </label>
             <textarea
               rows={4}
               required
               placeholder="Describe the project..."
-              className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring focus:ring-blue-200"
+              className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring focus:ring-blue-200 "
               value={form.brief}
               onChange={(e) => setForm({ ...form, brief: e.target.value })}
             />

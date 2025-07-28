@@ -68,6 +68,7 @@ const AdminDashboard = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+   const [expanded, setExpanded] = useState(false);
 
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -459,7 +460,23 @@ const AdminDashboard = () => {
                       {project.name}
                     </h3>
                     <p className="text-sm text-gray-600">{project.client}</p>
-                    <p className="text-sm text-gray-600">{project.brief}</p>
+                    <div>
+                      <p
+                        className={`text-sm text-muted-foreground break-words ${
+                          expanded ? "" : "line-clamp-2"
+                        }`}
+                      >
+                        {project.brief}
+                      </p>
+                      {project.brief.length > 100 && (
+                        <button
+                          onClick={() => setExpanded(!expanded)}
+                          className="text-xs text-green-900 hover:underline mt-1"
+                        >
+                          {expanded ? "View Less" : "View More"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="lg:col-span-2">
