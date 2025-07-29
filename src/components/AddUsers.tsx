@@ -17,7 +17,10 @@ interface AllowedUser {
   id: string;
   email: string;
   name: string;
-  role: "client" | "designer" | "admin";
+  role: "client" | "designer" | "developer" | "legalteam" | "admin" | "superadmin" | "manager";
+  department?: "development" | "designing" | "legal";
+  isManager?: boolean;
+  isSuperadmin?: boolean;
 }
 
 interface AddUserProps {
@@ -28,7 +31,10 @@ interface AddUserProps {
 const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"client" | "designer" | "admin">("designer");
+  const [role, setRole] = useState<"client" | "designer" | "developer" | "legalteam" | "admin" | "superadmin" | "manager">("designer");
+  const [department, setDepartment] = useState<"development" | "designing" | "legal" | "">("");
+  const [isManager, setIsManager] = useState(false);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   const isEditMode = !!editUser;
 
@@ -37,10 +43,16 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
       setEmail(editUser.email);
       setName(editUser.name);
       setRole(editUser.role);
+      setDepartment(editUser.department || "");
+      setIsManager(editUser.isManager || false);
+      setIsSuperadmin(editUser.isSuperadmin || false);
     } else {
       setEmail("");
       setName("");
       setRole("designer");
+      setDepartment("");
+      setIsManager(false);
+      setIsSuperadmin(false);
     }
   }, [editUser]);
 
@@ -72,14 +84,39 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
       return;
     }
 
+    // Validate department for specific roles
+    if (["designer", "developer", "legalteam"].includes(role) && !department) {
+      toast({
+        title: "Error",
+        description: "Department is required for this role",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       if (isEditMode && editUser) {
         // Update existing user
-        await updateDoc(doc(db, "allowedUsers", editUser.id), {
+        const updateData: any = {
           email: email.trim().toLowerCase(),
           name: name.trim(),
           role,
-        });
+        };
+
+        // Add department for roles that require it
+        if (["designer", "developer", "legalteam"].includes(role)) {
+          updateData.department = department;
+        }
+
+        // Add manager flag
+        updateData.isManager = isManager;
+
+        // Add superadmin flag only if explicitly set
+        if (isSuperadmin) {
+          updateData.isSuperadmin = isSuperadmin;
+        }
+
+        await updateDoc(doc(db, "allowedUsers", editUser.id), updateData);
 
         toast({
           title: "Success",
@@ -87,11 +124,26 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         });
       } else {
         // Add new user
-        await addDoc(collection(db, "allowedUsers"), {
+        const newUserData: any = {
           email: email.trim().toLowerCase(),
           name: name.trim(),
           role,
-        });
+        };
+
+        // Add department for roles that require it
+        if (["designer", "developer", "legalteam"].includes(role)) {
+          newUserData.department = department;
+        }
+
+        // Add manager flag
+        newUserData.isManager = isManager;
+
+        // Add superadmin flag only if explicitly set
+        if (isSuperadmin) {
+          newUserData.isSuperadmin = isSuperadmin;
+        }
+
+        await addDoc(collection(db, "allowedUsers"), newUserData);
 
         toast({
           title: "Success",
@@ -103,6 +155,9 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
       setEmail("");
       setName("");
       setRole("designer");
+      setDepartment("");
+      setIsManager(false);
+      setIsSuperadmin(false);
       // Close the dialog
       onClose();
     } catch (error) {
@@ -138,7 +193,7 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         <Select
           value={role}
           onValueChange={(value) =>
-            setRole(value as "client" | "designer" | "admin")
+            setRole(value as "client" | "designer" | "developer" | "legalteam" | "admin" | "superadmin" | "manager")
           }
         >
           <SelectTrigger>
@@ -147,9 +202,62 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
           <SelectContent>
             <SelectItem value="client">Client</SelectItem>
             <SelectItem value="designer">Designer</SelectItem>
+            <SelectItem value="developer">Developer</SelectItem>
+            <SelectItem value="legalteam">Legal Team</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="superadmin">Super Admin</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Department field - only for specific roles */}
+        {["designer", "developer", "legalteam"].includes(role) && (
+          <Select
+            value={department}
+            onValueChange={(value) => setDepartment(value as "development" | "designing" | "legal")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="designing">Designing</SelectItem>
+              <SelectItem value="development">Development</SelectItem>
+              <SelectItem value="legal">Legal</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Manager checkbox - for all roles except client */}
+        {role !== "client" && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isManager"
+              checked={isManager}
+              onChange={(e) => setIsManager(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <label htmlFor="isManager" className="text-sm font-medium">
+              Is Manager
+            </label>
+          </div>
+        )}
+
+        {/* Superadmin checkbox - only for admin/superadmin/manager roles */}
+        {["admin", "superadmin", "manager"].includes(role) && (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isSuperadmin"
+              checked={isSuperadmin}
+              onChange={(e) => setIsSuperadmin(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <label htmlFor="isSuperadmin" className="text-sm font-medium">
+              Is Superadmin
+            </label>
+          </div>
+        )}
         <Button onClick={handleSubmit}>
           {isEditMode ? "Update User" : "Add User"}
         </Button>

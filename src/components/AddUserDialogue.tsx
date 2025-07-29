@@ -12,7 +12,10 @@ interface AllowedUser {
   id: string;
   email: string;
   name: string;
-  role: "client" | "designer" | "admin";
+  role: "client" | "designer" | "developer" | "legalteam" | "admin" | "superadmin" | "manager";
+  department?: "development" | "designing" | "legal";
+  isManager?: boolean;
+  isSuperadmin?: boolean;
 }
 
 interface AddUserDialogProps {
