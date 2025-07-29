@@ -79,7 +79,7 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
   };
 
   const handleOpenChat = () => {
-    if (userRole === "admin") {
+    if (["admin", "superadmin", "manager"].includes(userRole || "")) {
       // Let admin choose chat target
       const choice = window.prompt(
         "Type '1' for Client Chat or '2' for Designer Chat"
@@ -91,7 +91,7 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
         setChatTarget("admin-designer");
         setOpenChat(true);
       }
-    } else if (userRole === "designer") {
+    } else if (["designer", "developer", "legalteam"].includes(userRole || "")) {
       setChatTarget("admin-designer");
       setOpenChat(true);
     } else if (userRole === "client") {

@@ -186,7 +186,7 @@ const Profile: React.FC = () => {
 
         {/* GST No */}
         {
-          userRole !== "admin" && userRole !== "designer" && (
+          !["admin", "superadmin", "manager", "designer", "developer", "legalteam"].includes(userRole || "") && (
 
         <div>
           <Label>GST No</Label>
@@ -273,7 +273,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Expertise */}
-        {userRole !== "admin" && userRole !== "client" && (
+        {!["admin", "superadmin", "manager", "client"].includes(userRole || "") && (
           <div className="md:col-span-2">
             <Label>Expertise</Label>
             <div className="flex gap-2">

@@ -258,7 +258,7 @@ const TasksPage: React.FC = () => {
                   <span>Designer: {task.assignedToName}</span>
                 </div>
                 <div className="flex gap-2">
-                  {(userRole === "admin" || userRole === "client") && (
+                  {(["admin", "superadmin", "manager"].includes(userRole || "") || userRole === "client") && (
                     <button
                       onClick={() => handleOpenChat(task, "admin-client")}
                       className="mt-3 inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded hover:bg-gray-800"
@@ -266,7 +266,7 @@ const TasksPage: React.FC = () => {
                       <MessageSquare className="w-4 h-4" /> Admin Chat
                     </button>
                   )}
-                  {(userRole === "admin" || userRole === "designer") && (
+                  {(["admin", "superadmin", "manager", "designer", "developer", "legalteam"].includes(userRole || "")) && (
                     <button
                       onClick={() => handleOpenChat(task, "admin-designer")}
                       className="mt-3 inline-flex items-center gap-2 bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-900"

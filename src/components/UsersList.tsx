@@ -58,7 +58,7 @@ const Users = () => {
   };
 
   const clients = users.filter(user => user.role === "client");
-  const employees = users.filter(user => user.role === "designer");
+  const employees = users.filter(user => ["designer", "developer", "legalteam", "admin", "superadmin", "manager"].includes(user.role));
   const totalUsers = users.length;
 
   const filteredClients = clients.filter(user =>

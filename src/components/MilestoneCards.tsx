@@ -247,7 +247,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                       {status}
                     </span>
 
-                    {userRole !== "designer" && (
+                    {!["designer", "developer", "legalteam"].includes(userRole || "") && (
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -275,7 +275,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                   <User className="w-4 h-4" />
                   Client: {milestone.client}
                 </div>
-                {userRole !== "designer" && (
+                {!["designer", "developer", "legalteam"].includes(userRole || "") && (
                   <div className="flex items-center gap-2">
                     <IndianRupee className="w-4 h-4" />
                     Amount: ₹{milestone.amount}
@@ -329,7 +329,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     <MessageSquare className="w-4 h-4" />
                   </Button> */}
 
-                  {userRole !== "designer" && (
+                  {!["designer", "developer", "legalteam"].includes(userRole || "") && (
                     <Button
                       variant="outline"
                       size="sm"

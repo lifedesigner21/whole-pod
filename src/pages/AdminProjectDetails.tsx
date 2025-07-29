@@ -72,7 +72,7 @@ const AdminProjectDetails = () => {
           Back to Dashboard
         </Button>
         {/* Create Milestone Button */}
-        {userRole !== "designer" && (
+        {!["designer", "developer", "legalteam"].includes(userRole || "") && (
           <Button
             className="flex items-center"
             onClick={() => milestoneRef.current?.openDialog()}

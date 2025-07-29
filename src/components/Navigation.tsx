@@ -116,10 +116,18 @@ const Navigation = () => {
     switch (role) {
       case "admin":
         return "Administrator";
+      case "superadmin":
+        return "Super Admin";
+      case "manager":
+        return "Manager";
       case "client":
         return "Client";
       case "designer":
         return "Designer";
+      case "developer":
+        return "Developer";
+      case "legalteam":
+        return "Legal Team";
       default:
         return "User";
     }
@@ -129,10 +137,18 @@ const Navigation = () => {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-800";
+      case "superadmin":
+        return "bg-purple-100 text-purple-800";
+      case "manager":
+        return "bg-orange-100 text-orange-800";
       case "client":
         return "bg-blue-100 text-blue-800";
       case "designer":
         return "bg-green-100 text-green-800";
+      case "developer":
+        return "bg-indigo-100 text-indigo-800";
+      case "legalteam":
+        return "bg-amber-100 text-amber-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -229,7 +245,7 @@ const Navigation = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {userRole === "admin" && (
+                {(userRole === "admin" || userRole === "superadmin" || userRole === "manager") && (
                   <>
                     <DropdownMenuItem
                       onSelect={(e) => {

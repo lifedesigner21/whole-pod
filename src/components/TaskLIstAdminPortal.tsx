@@ -145,7 +145,7 @@ const TaskList: React.FC<TaskListProps> = ({
   useEffect(() => {
     const visibleTasks = tasks.filter((task) => task.isDeleted !== true);
     const assigned =
-      userRole === "designer"
+      ["designer", "developer", "legalteam"].includes(userRole || "")
         ? visibleTasks.filter(
             (task) => task.assignedToName === user?.displayName
           )
@@ -506,7 +506,7 @@ const TaskList: React.FC<TaskListProps> = ({
   const handleOpenChat = (task: Task) => {
     setSelectedTask(task);
     if (userRole === "client") setChatTarget("admin-client");
-    else if (userRole === "designer") setChatTarget("admin-designer");
+    else if (["designer", "developer", "legalteam"].includes(userRole || "")) setChatTarget("admin-designer");
     else setChatTarget("admin-client");
     setOpenChat(true);
   };
@@ -575,7 +575,7 @@ const TaskList: React.FC<TaskListProps> = ({
                     {task.priority}
                   </span>
                 </CardTitle>
-                {userRole === "admin" && (
+                {["admin", "superadmin", "manager"].includes(userRole || "") && (
                   <div className="flex items-center justify-end gap-2">
                     <Pencil
                       className="w-4 h-4 text-yellow-600 cursor-pointer hover:text-yellow-800"
@@ -637,7 +637,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   <span className="font-medium">Status:</span>
 
                   {task.status !== "completed" ? (
-                    userRole !== "designer" ? (
+                    !["designer", "developer", "legalteam"].includes(userRole || "") ? (
                       <Popover
                         open={openPopoverId === task.id}
                         onOpenChange={(open) =>
@@ -684,7 +684,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   )}
                 </div>
 
-                {userRole !== "designer" && userRole !== "admin" && (
+                {!["designer", "developer", "legalteam", "admin", "superadmin", "manager"].includes(userRole || "") && (
                   <div className="flex items-center gap-2">
                     <span
                       className={
@@ -702,8 +702,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
                 <div className="flex flex-wrap gap-2 mt-2">
                   {task.status !== "Completed" &&
-                    userRole !== "admin" &&
-                    userRole !== "designer" && (
+                    !["admin", "superadmin", "manager", "designer", "developer", "legalteam"].includes(userRole || "") && (
                       <>
                         {!runningTimers[task.id] ? (
                           <Button
@@ -733,7 +732,7 @@ const TaskList: React.FC<TaskListProps> = ({
                       </>
                     )}
 
-                  {userRole === "admin" && (
+                  {["admin", "superadmin", "manager"].includes(userRole || "") && (
                     <>
                       <Button
                         size="sm"
@@ -901,7 +900,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
           {selectedTask && (
             <div className="mt-4 flex flex-col gap-4 h-full">
-              {userRole === "admin" && (
+              {["admin", "superadmin", "manager"].includes(userRole || "") && (
                 <div className="flex gap-2">
                   <Button
                     variant={

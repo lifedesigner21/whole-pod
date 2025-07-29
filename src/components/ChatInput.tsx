@@ -63,7 +63,7 @@ const handleSendMessage = async () => {
 
     // 2. Resolve recipient UID
     let recipientUid: string | null = null;
-   if (userRole === "admin") {
+   if (["admin", "superadmin", "manager"].includes(userRole || "")) {
      // Admin sending to client or designer
      recipientUid =
        chatTarget === "admin-client" ? clientUid || null : designerUid || null;

@@ -40,7 +40,7 @@ const LeaveRequestList = () => {
     if (!user?.uid) return;
 
     const unsub =
-      userRole === "admin"
+      ["admin", "superadmin", "manager"].includes(userRole || "")
         ? onSnapshot(collectionGroup(db, "leaveRequests"), (snapshot) => {
             const data = snapshot.docs.map((doc) => ({
               id: doc.id,
@@ -124,7 +124,7 @@ const LeaveRequestList = () => {
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>Leave Requests</CardTitle>
-          {userRole !== "admin" && <LeaveRequestDialog />}
+          {!["admin", "superadmin", "manager"].includes(userRole || "") && <LeaveRequestDialog />}
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
@@ -142,7 +142,7 @@ const LeaveRequestList = () => {
                 <th className="py-2 px-3 text-sm">Reason</th>
                 <th className="py-2 px-3 text-sm">Proof</th>
                 <th className="py-2 px-3 text-sm">Status</th>
-                {userRole === "admin" && (
+                {["admin", "superadmin", "manager"].includes(userRole || "") && (
                   <th className="py-2 px-3 text-sm">Actions</th>
                 )}
               </tr>
@@ -191,7 +191,7 @@ const LeaveRequestList = () => {
                       {req.status}
                     </Badge>
                   </td>
-                  {userRole === "admin" && (
+                  {["admin", "superadmin", "manager"].includes(userRole || "") && (
                     <td className="py-2 px-3 space-x-2">
                       <Button
                         size="sm"
@@ -220,7 +220,7 @@ const LeaveRequestList = () => {
               <tfoot>
                 <tr>
                   <td
-                    colSpan={userRole === "admin" ? 9 : 8}
+                    colSpan={["admin", "superadmin", "manager"].includes(userRole || "") ? 9 : 8}
                     className="text-center py-3"
                   >
                     <button

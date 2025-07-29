@@ -73,7 +73,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       try {
         const [designerSnap, allowedSnap] = await Promise.all([
           getDocs(
-            query(collection(db, "users"), where("role", "==", "designer"))
+            query(collection(db, "users"), where("role", "in", ["designer", "developer", "legalteam"]))
           ),
           getDocs(collection(db, "allowedUsers")),
         ]);
@@ -212,7 +212,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       });
 
       const adminSnap = await getDocs(
-        query(collection(db, "users"), where("role", "==", "admin"))
+        query(collection(db, "users"), where("role", "in", ["admin", "superadmin", "manager"]))
       );
       for (const docSnap of adminSnap.docs) {
         await addDoc(collection(db, `users/${docSnap.id}/notifications`), {
@@ -243,7 +243,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       {!taskToEdit && (
         <DialogTrigger asChild>
-          {userRole !== "designer" && (
+          {!["designer", "developer", "legalteam"].includes(userRole || "") && (
             <Button variant="default" onClick={() => setOpen(true)}>
               + Create Task
             </Button>
@@ -341,7 +341,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="To Do">To Do</SelectItem>
-              {userRole !== "admin" && (
+              {!["admin", "superadmin", "manager"].includes(userRole || "") && (
                 <>
                   <SelectItem value="In Progress">In Progress</SelectItem>
                   <SelectItem value="Info Required">Info Required</SelectItem>
