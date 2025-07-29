@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const [selectedRole, setSelectedRole] = useState<
-    "client" | "designer" | "admin" | null
+    "client" | "designer" | "admin" | "developer" | "legalteam" | "superadmin" | "manager" | null
   >(null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,15 +39,36 @@ const LoginPage = () => {
     }
 
     try {
-      const q = query(
-        collection(db, "allowedUsers"),
-        where("email", "==", email.trim().toLowerCase()),
-        where("role", "==", selectedRole)
-      );
+      // For Employee Portal, check for designer, developer, or legalteam roles
+      let rolesToCheck: string[] = [];
+      if (selectedRole === "designer") {
+        rolesToCheck = ["designer", "developer", "legalteam"];
+      } else {
+        rolesToCheck = [selectedRole];
+      }
 
-      const snapshot = await getDocs(q);
+      // Check if user exists with any of the allowed roles
+      let userFound = false;
+      let actualRole = "";
 
-      if (!snapshot.empty) {
+      for (const role of rolesToCheck) {
+        const q = query(
+          collection(db, "allowedUsers"),
+          where("email", "==", email.trim().toLowerCase()),
+          where("role", "==", role)
+        );
+
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          userFound = true;
+          actualRole = role;
+          break;
+        }
+      }
+
+      if (userFound) {
+        // Update selectedRole to the actual role found
+        setSelectedRole(actualRole as any);
         setIsVerified(true);
       } else {
         setError(
