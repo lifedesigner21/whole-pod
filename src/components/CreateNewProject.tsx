@@ -199,6 +199,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
+            createdBy:user.uid
           });
         }
       }
