@@ -83,16 +83,22 @@ const InvoiceDashboard = () => {
     } else {
       const lowerSearch = searchTerm.toLowerCase();
       const filtered = invoices.filter((invoice) => {
-        return (
-          invoice.projectName?.toLowerCase().includes(lowerSearch) ||
-          invoice.milestoneName?.toLowerCase().includes(lowerSearch) ||
-          invoice.status?.toLowerCase().includes(lowerSearch) ||
-          invoice.pendingAmount?.toString().includes(lowerSearch) ||
-          invoice.id?.toLowerCase().includes(lowerSearch) ||
-          invoice.paymentDueDate?.toLowerCase().includes(lowerSearch) ||
-          invoice.createdAt?.toLowerCase().includes(lowerSearch)
-        );
-      });
+  return (
+    typeof invoice.projectName === "string" &&
+      invoice.projectName.toLowerCase().includes(lowerSearch) ||
+    typeof invoice.milestoneName === "string" &&
+      invoice.milestoneName.toLowerCase().includes(lowerSearch) ||
+    typeof invoice.status === "string" &&
+      invoice.status.toLowerCase().includes(lowerSearch) ||
+    invoice.pendingAmount?.toString().includes(lowerSearch) ||
+    typeof invoice.id === "string" &&
+      invoice.id.toLowerCase().includes(lowerSearch) ||
+    typeof invoice.paymentDueDate === "string" &&
+      invoice.paymentDueDate.toLowerCase().includes(lowerSearch) ||
+    typeof invoice.createdAt === "string" &&
+      invoice.createdAt.toLowerCase().includes(lowerSearch)
+  );
+});
       setFilteredInvoices(filtered);
     }
   }, [searchTerm, invoices]);
