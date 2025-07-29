@@ -59,32 +59,46 @@ const DashboardRouter = () => {
   const { userRole, user, loading } = useAuth();
 
   // Still loading auth info
-  if (loading || !user || !userRole) {
+  if (loading || !user) {
     return <LoadingSpinner />;
   }
 
-  // Auth loaded, but user or role not available — don't redirect immediately
-  // if (!user || !userRole) {
-  //   return (
-  //     <div className="text-center py-10">
-  //       <p className="text-gray-600">No role assigned. Please log in again.</p>
-  //       <Navigate to="/login" replace />
-  //     </div>
-  //   );
-  // }
+  // Check if role is missing (due to department validation failure)
+  if (!userRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="text-center space-y-4">
+          <h1 className="text-3xl font-bold text-red-600">Access Error</h1>
+          <p className="text-gray-700">
+            Your department assignment is missing. Please contact admin.
+          </p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Render dashboard based on role
   switch (userRole) {
     case "admin":
+    case "superadmin":
+    case "manager":
       return <AdminDashboard />;
     case "client":
       return <ClientDashboard />;
     case "designer":
+    case "developer":
+    case "legalteam":
       return <DesignerDashboard />;
     default:
       return (
         <div className="text-center py-10">
-          <p className="text-red-500">Unknown role.</p>
+          <p className="text-red-500">Unknown role: {userRole}</p>
         </div>
       );
   }
