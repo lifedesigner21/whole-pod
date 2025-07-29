@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import {
@@ -17,8 +19,13 @@ import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const [selectedRole, setSelectedRole] = useState<
-    "client" | "designer" | "admin" | null
+    "developer" | "designer" | "legalteam" | null
   >(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<
+    "development" | "designing" | "legal" | null
+  >(null);
+  const [isManager, setIsManager] = useState(false);
+  const [showEmailStep, setShowEmailStep] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [isVerified, setIsVerified] = useState(false);
@@ -34,7 +41,12 @@ const LoginPage = () => {
     }
 
     if (!selectedRole) {
-      setError("Please select a correct role.");
+      setError("Please select a role.");
+      return;
+    }
+
+    if (!selectedDepartment) {
+      setError("Please select a department.");
       return;
     }
 
@@ -62,7 +74,7 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = async () => {
-    if (!selectedRole || !email) return;
+    if (!selectedRole || !selectedDepartment || !email) return;
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -78,6 +90,9 @@ const LoginPage = () => {
           name: user.displayName || "",
           email: user.email,
           role: selectedRole,
+          department: selectedDepartment,
+          isManager: isManager,
+          isSuperadmin: false, // Only manually set in Firestore
           createdAt: new Date().toISOString(),
         });
       }
@@ -101,26 +116,59 @@ const LoginPage = () => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!selectedRole ? (
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("client")}
-              >
-                Client Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("designer")}
-              >
-                Employee Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("admin")}
-              >
-                Admin Portal
-              </Button>
+          {!showEmailStep ? (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Select Role</label>
+                <Select onValueChange={(value) => setSelectedRole(value as "developer" | "designer" | "legalteam")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="developer">Developer</SelectItem>
+                    <SelectItem value="designer">Designer</SelectItem>
+                    <SelectItem value="legalteam">Legal Team</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedRole && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Department</label>
+                  <Select onValueChange={(value) => setSelectedDepartment(value as "development" | "designing" | "legal")}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose your department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="development">Development</SelectItem>
+                      <SelectItem value="designing">Designing</SelectItem>
+                      <SelectItem value="legal">Legal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedRole && selectedDepartment && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="isManager" 
+                    checked={isManager}
+                    onCheckedChange={(checked) => setIsManager(checked as boolean)}
+                  />
+                  <label htmlFor="isManager" className="text-sm font-medium">
+                    I am a department manager
+                  </label>
+                </div>
+              )}
+
+              {selectedRole && selectedDepartment && (
+                <Button
+                  className="w-full"
+                  onClick={() => setShowEmailStep(true)}
+                >
+                  Continue
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -143,7 +191,7 @@ const LoginPage = () => {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      setSelectedRole(null);
+                      setShowEmailStep(false);
                       setEmail("");
                       setError("");
                       setIsVerified(false);
@@ -167,7 +215,7 @@ const LoginPage = () => {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      setSelectedRole(null);
+                      setShowEmailStep(false);
                       setEmail("");
                       setError("");
                       setIsVerified(false);

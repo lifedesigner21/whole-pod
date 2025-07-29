@@ -6,13 +6,21 @@ import { doc, getDoc } from 'firebase/firestore';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  userRole: 'admin' | 'client' | 'designer' | null;
+  userRole: 'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null;
+  role: 'developer' | 'designer' | 'legalteam' | null;
+  department: 'development' | 'designing' | 'legal' | null;
+  isManager: boolean;
+  isSuperadmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   userRole: null,
+  role: null,
+  department: null,
+  isManager: false,
+  isSuperadmin: false,
 });
 
 export const useAuth = () => {
@@ -26,7 +34,11 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null>(null);
+  const [role, setRole] = useState<'developer' | 'designer' | 'legalteam' | null>(null);
+  const [department, setDepartment] = useState<'development' | 'designing' | 'legal' | null>(null);
+  const [isManager, setIsManager] = useState(false);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -36,17 +48,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const docSnap = await getDoc(doc(db, 'users', user.uid));
           if (docSnap.exists()) {
-            const role = docSnap.data().role as 'admin' | 'client' | 'designer';
-            setUserRole(role);
+            const userData = docSnap.data();
+            const userRole = userData.role as 'developer' | 'designer' | 'legalteam';
+            
+            // Set new role structure
+            setRole(userRole);
+            setDepartment(userData.department as 'development' | 'designing' | 'legal');
+            setIsManager(userData.isManager || false);
+            setIsSuperadmin(userData.isSuperadmin || false);
+            
+            // Maintain backward compatibility for userRole
+            setUserRole(userRole);
           } else {
             setUserRole(null);
+            setRole(null);
+            setDepartment(null);
+            setIsManager(false);
+            setIsSuperadmin(false);
           }
         } catch (err) {
           console.error('Error fetching user role:', err);
           setUserRole(null);
+          setRole(null);
+          setDepartment(null);
+          setIsManager(false);
+          setIsSuperadmin(false);
         }
       } else {
         setUserRole(null);
+        setRole(null);
+        setDepartment(null);
+        setIsManager(false);
+        setIsSuperadmin(false);
       }
 
       setLoading(false);
@@ -56,7 +89,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      userRole, 
+      role, 
+      department, 
+      isManager, 
+      isSuperadmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );

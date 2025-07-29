@@ -30,6 +30,7 @@ interface Task {
   id: string;
   title: string;
   description: string;
+  startDate: string;
   dueDate: string;
   estimatedHours: number;
   priority: string;
