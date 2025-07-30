@@ -123,17 +123,20 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      {/* <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Button>
-      </div>
+      </div> */}
 
       <Breadcrumb
         paths={[
-          { name: project.name || "Unnamed Project" },
-          { name: "Milestones" },
+          { name: "Projects", to: "/dashboard" },
+          {
+            name: project.name || "Unnamed Project",
+            to: `/project/${project.id}`,
+          },
         ]}
       />
 
@@ -261,45 +264,4 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
 
 export default ProjectDetails;
 
-{
-  /* Tasks List */
-}
-{
-  /* <Card>
-        <CardHeader className="flex items-center justify-between"></CardHeader>
-        <CardContent>
-          <KanbanTasks projectId={project.id} />
-        </CardContent>
-      </Card> */
-}
 
-{
-  /* Quick Actions */
-}
-{
-  /* <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="p-4 h-auto flex-col">
-              <FileText className="w-6 h-6 mb-2 text-blue-600" />
-              <span className="text-sm font-medium">Project Files</span>
-            </Button>
-            <Button variant="outline" className="p-4 h-auto flex-col">
-              <MessageSquare className="w-6 h-6 mb-2 text-green-600" />
-              <span className="text-sm font-medium">Client Messages</span>
-            </Button>
-            <Button variant="outline" className="p-4 h-auto flex-col">
-              <Clock className="w-6 h-6 mb-2 text-orange-600" />
-              <span className="text-sm font-medium">Time Tracker</span>
-            </Button>
-            <Button variant="outline" className="p-4 h-auto flex-col">
-              <AlertCircle className="w-6 h-6 mb-2 text-red-600" />
-              <span className="text-sm font-medium">Report Issue</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card> */
-}

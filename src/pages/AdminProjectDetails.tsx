@@ -67,10 +67,10 @@ const AdminProjectDetails = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-6">
         {/* Back Button */}
-        <Button variant="outline" onClick={() => navigate("/dashboard")}>
+        {/* <Button variant="outline" onClick={() => navigate("/dashboard")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
-        </Button>
+        </Button> */}
         {/* Create Milestone Button */}
         {userRole !== "designer" && (
           <Button
@@ -82,7 +82,12 @@ const AdminProjectDetails = () => {
         )}
       </div>
 
-      <Breadcrumb paths={[{ name: project.name }, { name: "Milestones" }]} />
+      <Breadcrumb
+        paths={[
+          { name: "Projects", to: "/dashboard" },
+          { name: project.name, to: `/project/${project.id}` },
+        ]}
+      />
 
       {/* Create/Edit Milestone Dialog */}
       <CreateMilestoneDialog
