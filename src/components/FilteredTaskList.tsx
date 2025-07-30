@@ -62,7 +62,7 @@ interface Task {
   completedProof?: string;
   startedAt?: string;
   isDeleted?: boolean; // New field to mark deletion
-  isApproved?: boolean
+  isApproved?: boolean;
 }
 
 interface FilteredTaskListProps {
@@ -243,9 +243,43 @@ const FilteredTaskList: React.FC<FilteredTaskListProps> = ({
     };
   }, [runningTimers]);
 
+  // const handleStart = async (taskId: string) => {
+  //   const task = tasks.find((t) => t.id === taskId);
+  //   if (!task) return;
+
+  //   const taskRef = doc(
+  //     db,
+  //     `projects/${task.projectId}/milestones/${task.milestoneId}/tasks/${task.id}`
+  //   );
+
+  //   try {
+  //     await updateDoc(taskRef, {
+  //       startedAt: new Date().toISOString(),
+  //     });
+  //     setRunningTimers((prev) => ({ ...prev, [taskId]: true }));
+  //   } catch (err) {
+  //     console.error("❌ Failed to start timer:", err);
+  //   }
+  // };
+
   const handleStart = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
+
+    // Check if any timer is already running
+    const anyRunning = Object.entries(runningTimers).some(
+      ([id, isRunning]) => isRunning && id !== taskId
+    );
+
+    if (anyRunning) {
+      toast({
+        title: "Timer already running",
+        description:
+          "You cannot start another task while one is already running.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const taskRef = doc(
       db,

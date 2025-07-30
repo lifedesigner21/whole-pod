@@ -37,6 +37,8 @@ import {
   updateDoc,
   doc,
   deleteDoc,
+  where,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import CreateMilestoneDialog, {
@@ -71,6 +73,7 @@ interface Milestone {
   progress: number;
   projectName?: string;
   clientId?: string;
+  createdAt?: Timestamp
 }
 
 interface MilestoneCardsProps {
@@ -112,16 +115,49 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   const [pendingAmount, setPendingAmount] = useState("0");
   const [paymentDueDate, setPaymentDueDate] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("Pending");
+  const [existingInvoice, setExistingInvoice] = useState<any | null>(null);
 
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
 
   const milestoneDialogRef = useRef<CreateMilestoneDialogRef>(null);
 
-  const handleAddInvoice = (milestone: Milestone) => {
+  const handleAddInvoice = async (milestone: Milestone) => {
     setSelectedMilestone(milestone);
     setIsDialogOpen(true);
     setInvoiceUrl("");
+    setExistingInvoice(null);
+    setPendingAmount("0");
+    setPaymentDueDate("");
+    setPaymentStatus("Pending");
+
+    // Check if invoice exists
+    const q = query(
+      collection(db, "invoiceUrls"),
+      where("isDeleted", "==", false),
+      orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(q, (snapshot) => {
+      const invoices = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as {
+          url?: string;
+          milestoneId?: string;
+          pendingAmount?: number;
+          paymentDueDate?: string;
+          status?: string;
+        }),
+      }));
+      const invoice = invoices.find((inv) => inv.milestoneId === milestone.id);
+      if (invoice) {
+        setExistingInvoice(invoice);
+        setInvoiceUrl(invoice.url || "");
+        setPendingAmount(invoice.pendingAmount?.toString() || "0");
+        setPaymentDueDate(invoice.paymentDueDate || "");
+        setPaymentStatus(invoice.status || "Pending");
+      }
+    });
   };
 
   const handleEditMilestone = (milestone: Milestone) => {
@@ -178,6 +214,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         pendingAmount: Number(pendingAmount) || 0,
         paymentDueDate,
         status: paymentStatus,
+        isDeleted: false,
         createdAt: new Date().toISOString(),
       });
 
@@ -226,102 +263,106 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
 
   return (
     <>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {project.milestones.map((milestone) => {
-          const isChatOpen = openChatId === milestone.id;
-          const messages = chatMessages[milestone.id] || [];
-          const status = milestone.progress === 100 ? "Completed" : "Pending";
+        {[...project.milestones]
+          .sort(
+            (a, b) =>
+              a.createdAt.toDate().getTime() - b.createdAt.toDate().getTime()
+          )
+          .map((milestone) => {
+            const isChatOpen = openChatId === milestone.id;
+            const messages = chatMessages[milestone.id] || [];
+            const status = milestone.progress === 100 ? "Completed" : "Pending";
 
-          return (
-            <Card key={milestone.id} className="hover:shadow-md transition">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 flex justify-between items-center">
-                  {milestone.name}
+            return (
+              <Card key={milestone.id} className="hover:shadow-md transition">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex justify-between items-center">
+                    {milestone.name}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                          status
+                        )}`}
+                      >
+                        {status}
+                      </span>
+
+                      {userRole !== "designer" && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditMilestone(milestone)}
+                          >
+                            <Pencil className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteMilestone(milestone.id)}
+                          >
+                            <Trash className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-2 text-sm text-gray-700">
+                  <p>{milestone.description}</p>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                        status
-                      )}`}
+                    <User className="w-4 h-4" />
+                    Client: {milestone.client}
+                  </div>
+                  {userRole !== "designer" && (
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="w-4 h-4" />
+                      Amount: ₹{milestone.amount}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Pod Designer: {milestone.podDesigner}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Start: {formatDate(milestone.startDate)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    End: {formatDate(milestone.endDate)}
+                  </div>
+
+                  <div className="mt-2">
+                    <span className="text-xs text-gray-600">Progress</span>
+                    <Progress
+                      value={milestone.progress || 0}
+                      className="h-2 mt-1"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() =>
+                        navigate(
+                          `/project/${projectId}/milestone/${milestone.id}`,
+                          {
+                            state: {
+                              milestoneName: milestone.name,
+                              projectName: projectName,
+                            },
+                          }
+                        )
+                      }
                     >
-                      {status}
-                    </span>
+                      View Progress
+                    </Button>
 
-                    {userRole !== "designer" && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditMilestone(milestone)}
-                        >
-                          <Pencil className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteMilestone(milestone.id)}
-                        >
-                          <Trash className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="space-y-2 text-sm text-gray-700">
-                <p>{milestone.description}</p>
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Client: {milestone.client}
-                </div>
-                {userRole !== "designer" && (
-                  <div className="flex items-center gap-2">
-                    <IndianRupee className="w-4 h-4" />
-                    Amount: ₹{milestone.amount}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Pod Designer: {milestone.podDesigner}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Start: {formatDate(milestone.startDate)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  End: {formatDate(milestone.endDate)}
-                </div>
-
-                <div className="mt-2">
-                  <span className="text-xs text-gray-600">Progress</span>
-                  <Progress
-                    value={milestone.progress || 0}
-                    className="h-2 mt-1"
-                  />
-                </div>
-
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() =>
-                      navigate(
-                        `/project/${projectId}/milestone/${milestone.id}`,
-                        {
-                          state: {
-                            milestoneName: milestone.name,
-                            projectName: projectName,
-                          },
-                        }
-                      )
-                    }
-                  >
-                    View Progress
-                  </Button>
-
-                  {/* <Button
+                    {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setOpenChatId(milestone.id)}
@@ -329,81 +370,20 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
                     <MessageSquare className="w-4 h-4" />
                   </Button> */}
 
-                  {userRole !== "designer" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddInvoice(milestone)}
-                    >
-                      <FileText className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-              {/* 
-              <Sheet open={isChatOpen} onOpenChange={() => setOpenChatId(null)}>
-                <SheetContent side="right" className="w-full max-w-md p-6">
-                  <SheetHeader>
-                    <SheetTitle>Milestone Chat</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 flex flex-col gap-4 h-full">
-                    <div className="flex-1 overflow-y-auto space-y-4 bg-gray-50 p-3 rounded">
-                      {messages.map((msg) => {
-                        const date = msg.timestamp?.toDate?.();
-                        const time = date
-                          ? new Intl.DateTimeFormat("en-US", {
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true,
-                            }).format(date)
-                          : "";
-
-                        const isOwnMessage = msg.sender === user?.displayName;
-
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex flex-col ${
-                              isOwnMessage ? "items-end" : "items-start"
-                            }`}
-                          >
-                            <span className="text-xs text-gray-500 italic mb-1">
-                              {msg.role}
-                            </span>
-                            <div
-                              className={`w-fit max-w-[80%] p-3 rounded-lg shadow-sm text-sm ${
-                                isOwnMessage
-                                  ? "bg-blue-100 text-right ml-auto"
-                                  : "bg-white text-left"
-                              }`}
-                            >
-                              <div className="font-semibold text-gray-800 text-sm mb-1">
-                                {msg.sender}
-                              </div>
-                              <div className="text-black whitespace-pre-wrap">
-                                {msg.content}
-                              </div>
-                              {time && (
-                                <div className="text-[11px] text-gray-500 mt-2">
-                                  {time}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <ChatInput
-                      projectId={projectId}
-                      milestoneId={milestone.id}
-                    />
+                    {userRole !== "designer" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddInvoice(milestone)}
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                </SheetContent>
-              </Sheet> */}
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })}
       </div>
 
       {/* Invoice Dialog */}
@@ -427,6 +407,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               placeholder="Enter amount to pay for the milestone"
               value={pendingAmount}
               onChange={(e) => setPendingAmount(e.target.value)}
+              disabled={!!existingInvoice}
             />
             <Label htmlFor="invoice-url">Payment Due</Label>
             <Input
@@ -434,6 +415,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               type="date"
               value={paymentDueDate}
               onChange={(e) => setPaymentDueDate(e.target.value)}
+              disabled={!!existingInvoice}
             />
             <Label>Payment Status</Label>
             <select
@@ -443,6 +425,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               }
               className="w-full border rounded px-3 py-2 mt-1"
               required={true}
+              disabled={!!existingInvoice}
             >
               <option value="Paid">Paid</option>
               <option value="Pending">Pending</option>
@@ -455,6 +438,7 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               value={invoiceUrl}
               onChange={(e) => setInvoiceUrl(e.target.value)}
               required
+              disabled={!!existingInvoice}
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -462,7 +446,9 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
               </Button>
               <Button
                 onClick={handleSubmitInvoice}
-                disabled={!invoiceUrl.trim() || isSubmitting}
+                disabled={
+                  !invoiceUrl.trim() || isSubmitting || !!existingInvoice
+                }
               >
                 {isSubmitting ? "Saving..." : "Save Invoice"}
               </Button>
