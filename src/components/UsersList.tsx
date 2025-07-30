@@ -4,10 +4,31 @@ import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Users as UsersIcon, Building, UserCheck, ArrowLeft, Mail, Phone, FileText, MapPin, User, Calendar, Shield, Briefcase, CreditCard, Clock } from "lucide-react";
+import {
+  Search,
+  Users as UsersIcon,
+  Building,
+  UserCheck,
+  ArrowLeft,
+  Mail,
+  Phone,
+  FileText,
+  MapPin,
+  User,
+  Calendar,
+  Shield,
+  Briefcase,
+  CreditCard,
+  Clock,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface User {
   id: string;
@@ -28,6 +49,8 @@ interface User {
   aadharNumber?: string;
   panNumber?: string;
   dateOfJoining?: string;
+  phone?: string;
+  expertise?: string[];
 }
 
 const Users = () => {
@@ -45,9 +68,9 @@ const Users = () => {
     try {
       const q = query(collection(db, "users"), orderBy("name"));
       const querySnapshot = await getDocs(q);
-      const usersData = querySnapshot.docs.map(doc => ({
+      const usersData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       })) as User[];
       setUsers(usersData);
     } catch (error) {
@@ -57,23 +80,26 @@ const Users = () => {
     }
   };
 
-  const clients = users.filter(user => user.role === "client");
-  const employees = users.filter(user => user.role === "designer");
+  const clients = users.filter((user) => user.role === "client");
+  const employees = users.filter((user) => user.role === "designer");
   const totalUsers = users.length;
 
-  const filteredClients = clients.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.company && user.company.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredClients = clients.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.company &&
+        user.company.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredEmployees = employees.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEmployees = employees.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const UserCard = ({ user }: { user: User }) => (
-    <Card 
+    <Card
       className="hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => setSelectedUser(user)}
     >
@@ -104,11 +130,13 @@ const Users = () => {
           </div>
           <div>
             <h3 className="text-lg font-semibold">{user.name}</h3>
-            <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+            <p className="text-sm text-muted-foreground capitalize">
+              {user.role}
+            </p>
           </div>
         </DialogTitle>
       </DialogHeader>
-      
+
       <div className="space-y-6">
         {/* Personal Info Section */}
         <div>
@@ -131,13 +159,17 @@ const Users = () => {
               <div className="grid grid-cols-2 gap-4">
                 {user.phonenumber && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Phone Number</p>
+                    <p className="text-xs text-muted-foreground">
+                      Phone Number
+                    </p>
                     <p className="text-sm font-medium">{user.phonenumber}</p>
                   </div>
                 )}
                 {user.dateOfBirth && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Date of Birth</p>
+                    <p className="text-xs text-muted-foreground">
+                      Date of Birth
+                    </p>
                     <p className="text-sm font-medium">{user.dateOfBirth}</p>
                   </div>
                 )}
@@ -147,29 +179,48 @@ const Users = () => {
         </div>
 
         {/* Contact Info Section */}
-        {(user.alternatemobile || user.permanentAddress || user.residentialAddress) && (
+        {(user.emergencyContact ||
+          user.permanentAddress ||
+          user.phone ||
+          user.residentialAddress) && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Phone className="w-4 h-4 text-primary" />
               <h4 className="font-semibold text-foreground">Contact Info</h4>
             </div>
             <div className="space-y-3">
-              {user.alternatemobile && (
+              {user.phone && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Emergency Contact (Phone number)</p>
-                  <p className="text-sm font-medium">{user.alternatemobile}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Emergency Contact (Phone number)
+                  </p>
+                  <p className="text-sm font-medium">{user.phone}</p>
+                </div>
+              )}
+              {user.emergencyContact && (
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Emergency Contact (Phone number)
+                  </p>
+                  <p className="text-sm font-medium">{user.emergencyContact}</p>
                 </div>
               )}
               {user.permanentAddress && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Permanent Address</p>
+                  <p className="text-xs text-muted-foreground">
+                    Permanent Address
+                  </p>
                   <p className="text-sm font-medium">{user.permanentAddress}</p>
                 </div>
               )}
               {user.residentialAddress && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Residential Address</p>
-                  <p className="text-sm font-medium">{user.residentialAddress}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Residential Address
+                  </p>
+                  <p className="text-sm font-medium">
+                    {user.residentialAddress}
+                  </p>
                 </div>
               )}
             </div>
@@ -177,7 +228,11 @@ const Users = () => {
         )}
 
         {/* Work Details Section */}
-        {(user.role || user.department || user.expertIn || user.averageIn || user.company) && (
+        {(user.role ||
+          user.department ||
+          user.expertIn ||
+          user.averageIn ||
+          user.company) && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Briefcase className="w-4 h-4 text-primary" />
@@ -202,15 +257,30 @@ const Users = () => {
                   <p className="text-sm font-medium">{user.company}</p>
                 </div>
               )}
-              {user.expertIn && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Expert In (Tags)</p>
-                  <p className="text-sm font-medium">{user.expertIn}</p>
-                </div>
-              )}
+              {user.expertise &&
+                Array.isArray(user.expertise) &&
+                user.expertise.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Expert In
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {user.expertise.map((skill: string, index: number) => (
+                        <span
+                          key={index}
+                          className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               {user.averageIn && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Average In (Tags)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Average In (Tags)
+                  </p>
                   <p className="text-sm font-medium">{user.averageIn}</p>
                 </div>
               )}
@@ -229,7 +299,9 @@ const Users = () => {
               <div className="grid grid-cols-2 gap-4">
                 {user.aadharNumber && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Aadhar Number</p>
+                    <p className="text-xs text-muted-foreground">
+                      Aadhar Number
+                    </p>
                     <p className="text-sm font-medium">{user.aadharNumber}</p>
                   </div>
                 )}
@@ -302,7 +374,9 @@ const Users = () => {
             <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{totalUsers}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {totalUsers}
+            </div>
           </CardContent>
         </Card>
 
@@ -314,7 +388,9 @@ const Users = () => {
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{clients.length}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {clients.length}
+            </div>
           </CardContent>
         </Card>
 
@@ -326,7 +402,9 @@ const Users = () => {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{employees.length}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {employees.length}
+            </div>
           </CardContent>
         </Card>
       </div>

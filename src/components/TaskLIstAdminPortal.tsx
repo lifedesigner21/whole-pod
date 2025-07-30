@@ -511,12 +511,26 @@ const TaskList: React.FC<TaskListProps> = ({
     setOpenChat(true);
   };
 
+  const sortByDate = (a: Task, b: Task) => {
+    const startA = new Date(a.startDate).getTime();
+    const startB = new Date(b.startDate).getTime();
+    const endA = new Date(a.dueDate).getTime();
+    const endB = new Date(b.dueDate).getTime();
+
+    // Sort by startDate first, then dueDate
+    return startA - startB || endA - endB;
+  };
+
   const grouped = {
-    pending: filteredTasks.filter(
-      (t) => t.status !== "Completed" && t.status !== "In Progress"
-    ),
-    inProgress: filteredTasks.filter((t) => t.status === "In Progress"),
-    completed: filteredTasks.filter((t) => t.status === "Completed"),
+    pending: filteredTasks
+      .filter((t) => t.status !== "Completed" && t.status !== "In Progress")
+      .sort(sortByDate),
+    inProgress: filteredTasks
+      .filter((t) => t.status === "In Progress")
+      .sort(sortByDate),
+    completed: filteredTasks
+      .filter((t) => t.status === "Completed")
+      .sort(sortByDate),
   };
 
   const handleEdit = (msg: any) => {
@@ -615,6 +629,10 @@ const TaskList: React.FC<TaskListProps> = ({
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   <span>Time Taken: {task.actualMinutes} Mins</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>Revision Count: {task.revisionReasons && task.revisionReasons.length}</span>
                 </div>
                 {task.isApproved === true && (
                   <div className="text-sm text-green-600 mt-2">

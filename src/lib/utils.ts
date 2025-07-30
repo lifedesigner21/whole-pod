@@ -1,5 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { twMerge } from "tailwind-merge";
 import { db } from "./firebase";
 
@@ -22,6 +30,7 @@ export async function syncPaidAmountFromInvoice(projectId: string) {
     const q = query(
       collection(db, "invoiceUrls"),
       where("projectId", "==", projectId),
+      where("isDeleted", "==", false),
       where("status", "==", "Paid")
     );
 
@@ -51,5 +60,57 @@ export async function syncPaidAmountFromInvoice(projectId: string) {
     console.log(`✅ Project paidAmount synced to ₹${totalPaid}`);
   } catch (err) {
     console.error("❌ Error syncing paidAmount:", err);
+  }
+}
+
+export async function decrementPaidAmountByInvoice(
+  invoiceId: string,
+  projectId: string
+) {
+  try {
+    // 🔍 Step 1: Get the invoice data
+    const invoiceRef = doc(db, "invoiceUrls", invoiceId);
+    const invoiceSnap = await getDoc(invoiceRef);
+
+    if (!invoiceSnap.exists()) {
+      console.error("Invoice not found.");
+      return;
+    }
+
+    const invoiceData = invoiceSnap.data();
+
+    // Only proceed if the invoice is marked as "Paid"
+    if (invoiceData.status !== "Paid") {
+      console.warn("Invoice is not marked as Paid. No adjustment made.");
+      return;
+    }
+
+    const amountToSubtract = Number(invoiceData.pendingAmount || 0);
+    if (isNaN(amountToSubtract)) {
+      console.warn("Invalid pendingAmount in invoice.");
+      return;
+    }
+
+    // 🔁 Step 2: Update the project document
+    const projectRef = doc(db, "projects", projectId);
+    const projectSnap = await getDoc(projectRef);
+
+    if (!projectSnap.exists()) {
+      console.error("Project not found.");
+      return;
+    }
+
+    const currentPaidAmount = Number(projectSnap.data().paidAmount || 0);
+    const newPaidAmount = Math.max(0, currentPaidAmount - amountToSubtract);
+
+    await updateDoc(projectRef, {
+      paidAmount: newPaidAmount,
+    });
+
+    console.log(
+      `✅ Decremented paidAmount by ₹${amountToSubtract}. New total: ₹${newPaidAmount}`
+    );
+  } catch (err) {
+    console.error("❌ Failed to decrement paidAmount:", err);
   }
 }

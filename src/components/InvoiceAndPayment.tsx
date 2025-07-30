@@ -3,7 +3,7 @@ import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,7 +12,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { updateDoc, doc } from "firebase/firestore";
-import { syncPaidAmountFromInvoice } from "@/lib/utils";
+import {
+  decrementPaidAmountByInvoice,
+  syncPaidAmountFromInvoice,
+} from "@/lib/utils";
 
 interface Invoice {
   id: string;
@@ -26,6 +29,7 @@ interface Invoice {
   paymentDueDate: string;
   status: string;
   createdAt: string;
+  isDeleted?: boolean;
 }
 
 const InvoiceDashboard = () => {
@@ -43,10 +47,12 @@ const InvoiceDashboard = () => {
           orderBy("createdAt", "desc")
         );
         const snapshot = await getDocs(ref);
-        const result: Invoice[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<Invoice, "id">),
-        }));
+        const result: Invoice[] = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Invoice, "id">),
+          }))
+          .filter((inv) => !inv.isDeleted); // <-- Filter out deleted
 
         // 🟡 Sort: Pending first, Paid last (and keep createdAt descending within same status)
         result.sort((a, b) => {
@@ -84,13 +90,19 @@ const InvoiceDashboard = () => {
       const lowerSearch = searchTerm.toLowerCase();
       const filtered = invoices.filter((invoice) => {
         return (
-          invoice.projectName?.toLowerCase().includes(lowerSearch) ||
-          invoice.milestoneName?.toLowerCase().includes(lowerSearch) ||
-          invoice.status?.toLowerCase().includes(lowerSearch) ||
+          (typeof invoice.projectName === "string" &&
+            invoice.projectName.toLowerCase().includes(lowerSearch)) ||
+          (typeof invoice.milestoneName === "string" &&
+            invoice.milestoneName.toLowerCase().includes(lowerSearch)) ||
+          (typeof invoice.status === "string" &&
+            invoice.status.toLowerCase().includes(lowerSearch)) ||
           invoice.pendingAmount?.toString().includes(lowerSearch) ||
-          invoice.id?.toLowerCase().includes(lowerSearch) ||
-          invoice.paymentDueDate?.toLowerCase().includes(lowerSearch) ||
-          invoice.createdAt?.toLowerCase().includes(lowerSearch)
+          (typeof invoice.id === "string" &&
+            invoice.id.toLowerCase().includes(lowerSearch)) ||
+          (typeof invoice.paymentDueDate === "string" &&
+            invoice.paymentDueDate.toLowerCase().includes(lowerSearch)) ||
+          (typeof invoice.createdAt === "string" &&
+            invoice.createdAt.toLowerCase().includes(lowerSearch))
         );
       });
       setFilteredInvoices(filtered);
@@ -118,6 +130,31 @@ const InvoiceDashboard = () => {
       }
     } catch (err) {
       console.error("Failed to update invoice status:", err);
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this invoice?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const invoiceRef = doc(db, "invoiceUrls", invoiceId);
+
+      // 🗑️ Soft delete the invoice
+      await updateDoc(invoiceRef, { isDeleted: true });
+
+      // 🧠 Update UI
+      setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+
+      const invoice = invoices.find((inv) => inv.id === invoiceId);
+      if (invoice?.projectId) {
+        await decrementPaidAmountByInvoice(invoiceId, invoice.projectId);
+      }
+      
+    } catch (err) {
+      console.error("Failed to delete invoice:", err);
     }
   };
 
@@ -368,6 +405,13 @@ const InvoiceDashboard = () => {
                             )}
                           </span>
                         )}
+
+                        {/* 🗑️ Delete Icon */}
+                        <Trash2
+                          size={16}
+                          className="text-red-500 cursor-pointer hover:text-red-700 ml-4"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                        />
                       </div>
                     </td>
                   </tr>

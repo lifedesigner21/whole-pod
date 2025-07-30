@@ -45,7 +45,7 @@ const LeaveRequestDialog = () => {
   const handleRequestLeave = async () => {
     const urlRegex =
       /^(https?:\/\/)([\w\-]+\.)+[\w\-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
-    if (!urlRegex.test(proofUrl.trim())) {
+    if (!urlRegex.test(proofUrl.trim()) && leaveType === "medical") {
       toast({
         title: "Missing required fields",
         description: "Please provide proper url before submitting.",
