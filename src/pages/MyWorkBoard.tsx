@@ -6,6 +6,7 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import TodaysSummaryCard from "@/components/TodaysSummaryCard";
 import FilteredTaskList from "@/components/FilteredTaskList"; // ✅ new import
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 interface Subtask {
   name: string;
@@ -30,6 +32,7 @@ interface Task {
   id: string;
   title: string;
   description: string;
+  startDate: string;
   dueDate: string;
   estimatedHours: number;
   priority: string;
@@ -42,39 +45,68 @@ interface Task {
   subtasks?: Subtask[];
   revisionCount?: number;
   isRevision?: boolean;
+  projectName?: string;
+  milestoneName?: string;
 }
 
 const MyWorkboard = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.uid) return;
 
-    const unsubscribe = onSnapshot(collectionGroup(db, "tasks"), (snapshot) => {
-      const userTasks: Task[] = [];
+    const unsubscribe = onSnapshot(
+      collectionGroup(db, "tasks"),
+      async (snapshot) => {
+        const taskPromises = snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data();
+          if (data.assignedTo !== user.uid) return null;
 
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.assignedTo === user.uid) {
           const pathParts = docSnap.ref.path.split("/");
           const projectId = pathParts[1];
           const milestoneId = pathParts[3];
 
-          userTasks.push({
+          // Get project and milestone names
+          const projectRef = doc(db, "projects", projectId);
+          const milestoneRef = doc(
+            db,
+            `projects/${projectId}/milestones/${milestoneId}`
+          );
+
+          const [projectSnap, milestoneSnap] = await Promise.all([
+            getDoc(projectRef),
+            getDoc(milestoneRef),
+          ]);
+
+          const projectName = projectSnap.exists()
+            ? projectSnap.data().name
+            : "";
+          const milestoneName = milestoneSnap.exists()
+            ? milestoneSnap.data().title
+            : "";
+
+          return {
             id: docSnap.id,
             ...data,
             projectId,
             milestoneId,
-          } as Task);
-        }
-      });
+            projectName,
+            milestoneName,
+          } as Task & { projectName: string; milestoneName: string };
+        });
 
-      setTasks(userTasks);
-    });
+        const taskResults = await Promise.all(taskPromises);
+        const validTasks = taskResults.filter(
+          (t): t is Task & { projectName: string; milestoneName: string } => !!t
+        );
+        setTasks(validTasks);
+      }
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -104,6 +136,15 @@ const MyWorkboard = () => {
 
   const total = tasks.length;
   const pending = total - completed;
+  const filteredTasks = tasks.filter((task) => {
+    const query = searchTerm.toLowerCase();
+    return (
+      task.title.toLowerCase().includes(query) ||
+      task.projectName?.toLowerCase().includes(query) ||
+      task.milestoneName?.toLowerCase().includes(query)
+    );
+  });
+
   const pendingFeedback = tasks.reduce((count, task) => {
     const subtasks = task.subtasks || [];
     return count + subtasks.filter((s) => s.isApproved === false).length;
@@ -125,10 +166,19 @@ const MyWorkboard = () => {
         pendingFeedback={pendingFeedback}
         totalRevisions={totalRevisions}
       /> */}
+      <div className="w-full max-w-md  mb-4">
+        <Input
+          type="text"
+          placeholder="Search tasks..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full"
+        />
+      </div>
 
       {/* ✅ Use FilteredTaskList instead of TaskList */}
       <FilteredTaskList
-        tasks={tasks}
+        tasks={filteredTasks}
         openPopoverId={openPopoverId}
         setOpenPopoverId={setOpenPopoverId}
         onStatusChange={handleStatusChange}

@@ -27,6 +27,7 @@ interface Task {
   createdAt: string;
   projectId: string;
   milestoneId: string;
+  startDate: string;
   actualMinutes?: number;
   onHoldReason?: string;
   isRevision?: boolean;
@@ -152,10 +153,10 @@ const MilestoneDetailsPage = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <Button variant="outline" onClick={() => navigate(`/dashboard`)}>
+        {/* <Button variant="outline" onClick={() => navigate(`/dashboard`)}>
           <ArrowLeft className="w-4 h-4 mr-1" />
           Go Back
-        </Button>
+        </Button> */}
         <CreateTaskDialog
           projectId={projectId!}
           milestoneId={milestoneId!}
@@ -164,9 +165,10 @@ const MilestoneDetailsPage = () => {
       </div>
       <Breadcrumb
         paths={[
-          { name: projectName || "Project" },
+          { name: "Projects", to: "/dashboard" },
+          { name: projectName || "Project", to: `/project/${projectId}` },
+          { name:"Milestone" },
           { name: milestoneName || "Milestone" },
-          { name: "Tasks" },
         ]}
       />
 

@@ -17,12 +17,12 @@ const Breadcrumb = ({ paths }: BreadcrumbProps) => {
           {path.to ? (
             <span
               onClick={() => navigate(path.to!)}
-              className="hover:underline cursor-pointer text-blue-600"
+              className="hover:underline cursor-pointer text-blue-600 uppercase"
             >
               {path.name}
             </span>
           ) : (
-            <span className="font-medium text-gray-800">{path.name}</span>
+            <span className="font-medium text-gray-800 uppercase">{path.name}</span>
           )}
         </div>
       ))}
