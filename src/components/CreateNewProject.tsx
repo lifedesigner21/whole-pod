@@ -43,6 +43,7 @@ type NewProject = {
   department: string;
   teamMembers: { id: string; name: string }[];
   poc: { id: string; name: string };
+  manager: { id: string; name: string };
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -76,6 +77,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     department: "",
     teamMembers: [],
     poc: { id: "", name: "" },
+    manager: { id: "", name: "" },
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -91,6 +93,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   const [designers, setDesigners] = useState<UserOption[]>([]);
   const [developers, setDevelopers] = useState<UserOption[]>([]);
   const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
+  const [managers, setManagers] = useState<UserOption[]>([]);
   const { user } = useAuth();
 
   const getCurrentDepartmentUsers = () => {
@@ -261,6 +264,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         department: editProject.department || "",
         teamMembers: editProject.teamMembers || [],
         poc: editProject.poc || { id: "", name: "" },
+        manager: editProject.manager || { id: "", name: "" },
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -279,6 +283,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         department: "",
         teamMembers: [],
         poc: { id: "", name: "" },
+        manager: { id: "", name: "" },
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -295,7 +300,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const [clientSnap, designerSnap, developerSnap, legalSnap, allowedSnap] = await Promise.all([
+        const [clientSnap, designerSnap, developerSnap, legalSnap, managerSnap, allowedSnap] = await Promise.all([
           getDocs(
             query(collection(db, "users"), where("role", "==", "client"))
           ),
@@ -307,6 +312,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           ),
           getDocs(
             query(collection(db, "users"), where("role", "==", "legalteam"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "manager"))
           ),
           getDocs(collection(db, "allowedUsers")),
         ]);
@@ -343,10 +351,18 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             name: doc.data().name,
           }));
 
+        const filteredManagers = managerSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name,
+          }));
+
         setClients(filteredClients);
         setDesigners(filteredDesigners);
         setDevelopers(filteredDevelopers);
         setLegalTeam(filteredLegal);
+        setManagers(filteredManagers);
       } catch (error) {
         console.error("Error fetching users:", error);
       }
@@ -611,6 +627,30 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
               value={form.assetsLink}
               onChange={(e) => setForm({ ...form, assetsLink: e.target.value })}
             />
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium text-gray-700">Manager</label>
+            <Select
+              value={form.manager.id}
+              onValueChange={(val) => {
+                const selectedManager = managers.find(m => m.id === val);
+                if (selectedManager) {
+                  setForm({ ...form, manager: { id: val, name: selectedManager.name } });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Manager" />
+              </SelectTrigger>
+              <SelectContent>
+                {managers.map((manager) => (
+                  <SelectItem key={manager.id} value={manager.id}>
+                    {manager.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
