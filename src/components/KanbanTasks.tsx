@@ -110,7 +110,7 @@ const KanbanColumn = ({ status, tasks }) => {
 };
 
 const KanbanTaskCard = ({ task }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
+  const { attributes, listeners, setNodeRef, transform } =
     useDraggable({ id: task.id });
 
   const getPriorityColor = (priority: string) => {
@@ -150,7 +150,7 @@ const KanbanTaskCard = ({ task }) => {
         transform: transform
           ? `translate(${transform.x}px, ${transform.y}px)`
           : undefined,
-        transition,
+        
       }}
       className={`p-3 mb-3 rounded shadow cursor-move ${getStatusColor(
         task.status

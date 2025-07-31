@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
-import DesignerDashboard from "@/pages/DesignerDashboard";
+import DepartmentDashboard from "@/pages/DepartmentDashboard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Navigation from "@/components/Navigation";
 import NotFound from "./pages/NotFound";
@@ -80,7 +80,9 @@ const DashboardRouter = () => {
     case "client":
       return <ClientDashboard />;
     case "designer":
-      return <DesignerDashboard />;
+    case "developer":
+    case "legalteam":
+      return <DepartmentDashboard />;
     default:
       return (
         <div className="text-center py-10">

@@ -44,9 +44,9 @@ interface Task {
   isDeleted?: boolean; // New field to mark deletion
 }
 
-const DesignerDashboard = () => {
+const DepartmentDashboard = () => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [designerProjects, setDesignerProjects] = useState<any[]>([]);
+  const [departmentProjects, setDepartmentProjects] = useState<any[]>([]);
   const [taskStats, setTaskStats] = useState({
     completed: 0,
     total: 0,
@@ -61,7 +61,7 @@ const DesignerDashboard = () => {
     }[]
   >([]);
   const [revisionCount, setRevisionCount] = useState(0);
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   const handleViewDetails = (projectId: string) => {
     setSelectedProject(projectId);
@@ -89,10 +89,21 @@ const DesignerDashboard = () => {
   }, [user?.uid]);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || !userRole) return;
+    
+    // Dynamic field mapping based on user role
+    const roleFieldMap: Record<string, string> = {
+      designer: "designerId",
+      developer: "developerId",
+      legalteam: "legalId"
+    };
+    
+    const fieldName = roleFieldMap[userRole];
+    if (!fieldName) return;
+
     const q = query(
       collection(db, "projects"),
-      where("designerId", "==", user.uid)
+      where(fieldName, "==", user.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs
@@ -101,10 +112,10 @@ const DesignerDashboard = () => {
           ...(doc.data() as any),
         }))
         .filter((project) => project.isDeleted !== true);
-      setDesignerProjects(projects);
+      setDepartmentProjects(projects);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, userRole]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -204,7 +215,7 @@ const DesignerDashboard = () => {
   }, [user]);
 
   if (selectedProject) {
-    const project = designerProjects.find((p) => p.id === selectedProject);
+    const project = departmentProjects.find((p) => p.id === selectedProject);
     if (project) {
       return (
         <ProjectDetails project={project} onBack={handleBackToDashboard} />
@@ -212,12 +223,26 @@ const DesignerDashboard = () => {
     }
   }
 
+  // Dynamic dashboard title based on user role
+  const getDashboardTitle = () => {
+    switch (userRole) {
+      case 'designer':
+        return 'Designer Dashboard';
+      case 'developer':
+        return 'Developer Dashboard';
+      case 'legalteam':
+        return 'Legal Team Dashboard';
+      default:
+        return 'Department Dashboard';
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Designer Dashboard
+            {getDashboardTitle()}
           </h1>
           <p className="text-gray-600 mt-1">
             Welcome back! Here's your workspace overview
@@ -242,7 +267,7 @@ const DesignerDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {designerProjects.map((project) => (
+            {departmentProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -339,4 +364,4 @@ const DesignerDashboard = () => {
   );
 };
 
-export default DesignerDashboard;
+export default DepartmentDashboard;

@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  userRole: 'admin' | 'client' | 'designer' | null;
+  userRole: 'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,7 +26,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const docSnap = await getDoc(doc(db, 'users', user.uid));
           if (docSnap.exists()) {
-            const role = docSnap.data().role as 'admin' | 'client' | 'designer';
+            const role = docSnap.data().role as 'admin' | 'client' | 'designer' | 'developer' | 'legalteam';
             setUserRole(role);
           } else {
             setUserRole(null);
