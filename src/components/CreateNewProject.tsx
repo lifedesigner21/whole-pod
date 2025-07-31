@@ -40,9 +40,8 @@ type NewProject = {
   name: string;
   client: string;
   clientId: string;
-  designers: { id: string; name: string }[];
-  developers: { id: string; name: string }[];
-  legalTeam: { id: string; name: string }[];
+  department: string;
+  teamMembers: { id: string; name: string }[];
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -73,9 +72,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     name: "",
     client: "",
     clientId: "",
-    designers: [],
-    developers: [],
-    legalTeam: [],
+    department: "",
+    teamMembers: [],
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -93,23 +91,33 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
   const { user } = useAuth();
 
-  const handleTeamMemberToggle = (
-    member: UserOption,
-    department: 'designers' | 'developers' | 'legalTeam'
-  ) => {
+  const getCurrentDepartmentUsers = () => {
+    switch (form.department) {
+      case "design":
+        return designers;
+      case "development":
+        return developers;
+      case "legal":
+        return legalTeam;
+      default:
+        return [];
+    }
+  };
+
+  const handleTeamMemberToggle = (member: UserOption) => {
     setForm(prev => {
-      const currentMembers = prev[department];
+      const currentMembers = prev.teamMembers;
       const isSelected = currentMembers.some(m => m.id === member.id);
       
       if (isSelected) {
         return {
           ...prev,
-          [department]: currentMembers.filter(m => m.id !== member.id)
+          teamMembers: currentMembers.filter(m => m.id !== member.id)
         };
       } else {
         return {
           ...prev,
-          [department]: [...currentMembers, member]
+          teamMembers: [...currentMembers, member]
         };
       }
     });
@@ -120,7 +128,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     if (
       !form.name ||
       !form.clientId ||
-      form.designers.length === 0 ||
+      !form.department ||
+      form.teamMembers.length === 0 ||
       !form.totalAmount ||
       !form.brief ||
       !form.startDate ||
@@ -195,16 +204,14 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         });
 
         // 🔔 Notifications for all team members
-        const { name, designers, developers, legalTeam, clientId } = form;
+        const { name, teamMembers, clientId } = form;
 
-        const allTeamMembers = [
-          ...designers.map(d => ({ userId: d.id, role: 'designer' })),
-          ...developers.map(d => ({ userId: d.id, role: 'developer' })),
-          ...legalTeam.map(l => ({ userId: l.id, role: 'legal team' })),
+        const allNotifications = [
+          ...teamMembers.map(member => ({ userId: member.id, role: form.department })),
           { userId: clientId, role: 'client' }
         ];
 
-        for (const member of allTeamMembers) {
+        for (const member of allNotifications) {
           await addDoc(collection(db, `users/${member.userId}/notifications`), {
             message: member.role === 'client' 
               ? `You have been added to the project: ${name}.`
@@ -249,9 +256,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         name: editProject.name || "",
         client: editProject.client || "",
         clientId: editProject.clientId || "",
-        designers: editProject.designers || [],
-        developers: editProject.developers || [],
-        legalTeam: editProject.legalTeam || [],
+        department: editProject.department || "",
+        teamMembers: editProject.teamMembers || [],
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -267,9 +273,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         name: "",
         client: "",
         clientId: "",
-        designers: [],
-        developers: [],
-        legalTeam: [],
+        department: "",
+        teamMembers: [],
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -346,6 +351,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     fetchUsers();
   }, []);
 
+  const currentDepartmentUsers = getCurrentDepartmentUsers();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -411,83 +418,59 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             />
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Designers ({form.designers.length} selected)
-            </label>
-            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
-              {designers.map((designer) => (
-                <div key={designer.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`designer-${designer.id}`}
-                    checked={form.designers.some(d => d.id === designer.id)}
-                    onCheckedChange={() => handleTeamMemberToggle(designer, 'designers')}
-                  />
-                  <label 
-                    htmlFor={`designer-${designer.id}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {designer.name}
-                  </label>
-                </div>
-              ))}
-              {designers.length === 0 && (
-                <p className="text-sm text-gray-500">No designers available</p>
-              )}
-            </div>
+          <div className="grid gap-1">
+            <label className="text-sm font-medium text-gray-700">Department</label>
+            <Select
+              value={form.department}
+              required
+              onValueChange={(val) => {
+                setForm({
+                  ...form,
+                  department: val,
+                  teamMembers: [] // Clear team members when department changes
+                });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="design">Design</SelectItem>
+                <SelectItem value="development">Development</SelectItem>
+                <SelectItem value="legal">Legal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Developers ({form.developers.length} selected)
-            </label>
-            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
-              {developers.map((developer) => (
-                <div key={developer.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`developer-${developer.id}`}
-                    checked={form.developers.some(d => d.id === developer.id)}
-                    onCheckedChange={() => handleTeamMemberToggle(developer, 'developers')}
-                  />
-                  <label 
-                    htmlFor={`developer-${developer.id}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {developer.name}
-                  </label>
-                </div>
-              ))}
-              {developers.length === 0 && (
-                <p className="text-sm text-gray-500">No developers available</p>
-              )}
+          {form.department && (
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                {form.department === "design" ? "Designers" : 
+                 form.department === "development" ? "Developers" : 
+                 "Legal Team"} ({form.teamMembers.length} selected)
+              </label>
+              <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
+                {currentDepartmentUsers.map((member) => (
+                  <div key={member.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`member-${member.id}`}
+                      checked={form.teamMembers.some(m => m.id === member.id)}
+                      onCheckedChange={() => handleTeamMemberToggle(member)}
+                    />
+                    <label 
+                      htmlFor={`member-${member.id}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {member.name}
+                    </label>
+                  </div>
+                ))}
+                {currentDepartmentUsers.length === 0 && (
+                  <p className="text-sm text-gray-500">No team members available</p>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-gray-700">
-              Legal Team ({form.legalTeam.length} selected)
-            </label>
-            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
-              {legalTeam.map((legal) => (
-                <div key={legal.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`legal-${legal.id}`}
-                    checked={form.legalTeam.some(l => l.id === legal.id)}
-                    onCheckedChange={() => handleTeamMemberToggle(legal, 'legalTeam')}
-                  />
-                  <label 
-                    htmlFor={`legal-${legal.id}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {legal.name}
-                  </label>
-                </div>
-              ))}
-              {legalTeam.length === 0 && (
-                <p className="text-sm text-gray-500">No legal team members available</p>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="grid gap-1">
             <label className="text-sm font-medium text-gray-700">Status</label>
