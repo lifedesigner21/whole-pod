@@ -16,12 +16,13 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
-  const [selectedRole, setSelectedRole] = useState<
+  const [userRole, setUserRole] = useState<
     "client" | "designer" | "developer" | "legalteam" | "admin" | "manager" | null
   >(null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [isVerified, setIsVerified] = useState(false);
+  const [showGoogleLogin, setShowGoogleLogin] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -33,26 +34,20 @@ const LoginPage = () => {
       return;
     }
 
-    if (!selectedRole) {
-      setError("Please select a correct role.");
-      return;
-    }
-
     try {
       const q = query(
         collection(db, "allowedUsers"),
-        where("email", "==", email.trim().toLowerCase()),
-        where("role", "==", selectedRole)
+        where("email", "==", email.trim().toLowerCase())
       );
 
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
+        const userData = snapshot.docs[0].data();
+        setUserRole(userData.role);
         setIsVerified(true);
       } else {
-        setError(
-          "Email and role mismatch or not allowed. Please contact admin."
-        );
+        setError("Email not found or not allowed. Please contact admin.");
         setIsVerified(false);
       }
     } catch (error) {
@@ -61,8 +56,12 @@ const LoginPage = () => {
     }
   };
 
+  const handlePortalClick = () => {
+    setShowGoogleLogin(true);
+  };
+
   const handleGoogleLogin = async () => {
-    if (!selectedRole || !email) return;
+    if (!userRole || !email) return;
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -77,7 +76,7 @@ const LoginPage = () => {
           uid: user.uid,
           name: user.displayName || "",
           email: user.email,
-          role: selectedRole,
+          role: userRole,
           createdAt: new Date().toISOString(),
         });
       }
@@ -91,6 +90,14 @@ const LoginPage = () => {
     }
   };
 
+  const handleReset = () => {
+    setEmail("");
+    setError("");
+    setIsVerified(false);
+    setUserRole(null);
+    setShowGoogleLogin(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md">
@@ -101,101 +108,65 @@ const LoginPage = () => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!selectedRole ? (
-            <div className="space-y-2">
+          {!isVerified ? (
+            <>
+              <Input
+                placeholder="Enter your email to verify"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
               <Button
                 className="w-full"
-                onClick={() => setSelectedRole("client")}
+                onClick={handleVerifyEmail}
+                disabled={!email.trim()}
               >
-                Client Portal
+                Verify Email
+              </Button>
+            </>
+          ) : !showGoogleLogin ? (
+            <div className="space-y-4">
+              <p className="text-sm text-green-600 text-center">
+                Email verified successfully!
+              </p>
+              <Button
+                className="w-full"
+                onClick={handlePortalClick}
+              >
+                {userRole === "client" && "Client Portal"}
+                {userRole === "designer" && "Designer Portal"}
+                {userRole === "developer" && "Developer Portal"}
+                {userRole === "legalteam" && "Legal Team Portal"}
+                {userRole === "manager" && "Manager Portal"}
+                {userRole === "admin" && "Admin Portal"}
               </Button>
               <Button
+                variant="outline"
                 className="w-full"
-                onClick={() => setSelectedRole("designer")}
+                onClick={handleReset}
               >
-                Designer Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("developer")}
-              >
-                Developer Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("legalteam")}
-              >
-                Legal Team Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("manager")}
-              >
-                Manager Portal
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => setSelectedRole("admin")}
-              >
-                Admin Portal
+                ← Back to Email Verification
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {!isVerified ? (
-                <>
-                  <Input
-                    placeholder="Enter your email to verify"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  {error && <p className="text-sm text-red-600">{error}</p>}
-                  <Button
-                    className="w-full"
-                    onClick={handleVerifyEmail}
-                    disabled={!email.trim()}
-                  >
-                    Verify Email
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedRole(null);
-                      setEmail("");
-                      setError("");
-                      setIsVerified(false);
-                    }}
-                  >
-                    ← Back to Role Selection
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={handleGoogleLogin}
-                    className="w-full"
-                    disabled={loading}
-                  >
-                    {loading
-                      ? "Signing in..."
-                      : `Sign in as ${selectedRole} using Google`}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedRole(null);
-                      setEmail("");
-                      setError("");
-                      setIsVerified(false);
-                    }}
-                  >
-                    ← Back to Role Selection
-                  </Button>
-                </>
-              )}
-            </div>
+            <>
+              <Button
+                onClick={handleGoogleLogin}
+                className="w-full"
+                disabled={loading}
+              >
+                {loading
+                  ? "Signing in..."
+                  : `Sign in as ${userRole} using Google`}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleReset}
+              >
+                ← Back to Email Verification
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
