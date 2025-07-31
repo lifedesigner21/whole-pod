@@ -545,13 +545,19 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             <label className="text-sm font-medium text-gray-700">
               Service Type
             </label>
-            <Input
-              placeholder="Enter service type"
+            <Select
               value={form.serviceType}
-              onChange={(e) =>
-                setForm({ ...form, serviceType: e.target.value })
-              }
-            />
+              onValueChange={(val) => setForm({ ...form, serviceType: val })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Service Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UI/UX">UI/UX</SelectItem>
+                <SelectItem value="Dev">Dev</SelectItem>
+                <SelectItem value="Legal">Legal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-1">
