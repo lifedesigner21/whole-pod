@@ -549,8 +549,8 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="lg:col-span-2">
-                    <p className="text-sm text-gray-600">Designer</p>
-                    <p className="font-medium">{project.designer}</p>
+                    <p className="text-sm text-gray-600">POC</p>
+                    <p className="font-medium">{project.poc.name}</p>
                   </div>
 
                   <div className="lg:col-span-2">
