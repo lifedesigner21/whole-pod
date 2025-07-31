@@ -42,6 +42,7 @@ type NewProject = {
   clientId: string;
   department: string;
   teamMembers: { id: string; name: string }[];
+  poc: string;
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -74,6 +75,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     clientId: "",
     department: "",
     teamMembers: [],
+    poc: "",
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -258,6 +260,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: editProject.clientId || "",
         department: editProject.department || "",
         teamMembers: editProject.teamMembers || [],
+        poc: editProject.poc || "",
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -275,6 +278,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: "",
         department: "",
         teamMembers: [],
+        poc: "",
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -424,11 +428,12 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
               value={form.department}
               required
               onValueChange={(val) => {
-                setForm({
-                  ...form,
-                  department: val,
-                  teamMembers: [] // Clear team members when department changes
-                });
+        setForm({
+          ...form,
+          department: val,
+          teamMembers: [], // Clear team members when department changes
+          poc: "" // Clear POC when department changes
+        });
               }}
             >
               <SelectTrigger>
@@ -469,6 +474,27 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
                   <p className="text-sm text-gray-500">No team members available</p>
                 )}
               </div>
+            </div>
+          )}
+
+          {form.department && (
+            <div className="grid gap-1">
+              <label className="text-sm font-medium text-gray-700">POC</label>
+              <Select
+                value={form.poc}
+                onValueChange={(val) => setForm({ ...form, poc: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select POC" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentDepartmentUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
