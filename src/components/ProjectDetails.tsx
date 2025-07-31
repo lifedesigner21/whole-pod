@@ -18,6 +18,7 @@ import { db } from "@/lib/firebase";
 import { formatDate } from "@/lib/utils";
 import MilestoneCards from "./MilestoneCards";
 import { CreateMilestoneDialogRef } from "./CreateMilestoneDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import Breadcrumb from "./BreadCrumb";
 
 interface Task {
@@ -39,9 +40,11 @@ interface ProjectDetailsProps {
 }
 
 const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
+  const { user, userRole } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientEmail, setClientEmail] = useState<string>("");
   const [milestones, setMilestones] = useState([]);
+  const [userTasks, setUserTasks] = useState<Task[]>([]);
 
   const milestoneDialogRef = useRef<CreateMilestoneDialogRef | null>(null);
 
@@ -74,10 +77,20 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
       })) as Task[];
 
       setTasks(fetchedTasks);
+      
+      // Filter tasks for current user if they are a designer
+      if (userRole === "designer" && user?.email) {
+        const userSpecificTasks = fetchedTasks.filter(
+          (task) => task.assignedTo === user.email && !task.isDeleted
+        );
+        setUserTasks(userSpecificTasks);
+      } else {
+        setUserTasks(fetchedTasks.filter((task) => !task.isDeleted));
+      }
     });
 
     return () => unsubscribe();
-  }, [project.id]);
+  }, [project.id, userRole, user?.email]);
 
   useEffect(() => {
     const fetchClientEmail = async () => {
@@ -116,8 +129,8 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
     if (project.id) fetchMilestones();
   }, [project.id]);
 
-  const completedTasks = tasks.filter(
-    (task) => task.status === "Completed" && task.isDeleted !== true
+  const completedTasks = userTasks.filter(
+    (task) => task.status === "Completed"
   ).length;
 
   return (
@@ -148,17 +161,16 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onBack }) => {
             <div>
               <div className="flex items-center gap-2 mb-2 mt-6">
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium">Tasks Progress</span>
+                <span className="text-sm font-medium">
+                  {userRole === "designer" ? "My Tasks Progress" : "Tasks Progress"}
+                </span>
               </div>
               <p className="text-2xl font-bold">
-                {completedTasks}/
-                {tasks.filter((task) => !task.isDeleted).length}
+                {completedTasks}/{userTasks.length}
               </p>
               <Progress
                 value={
-                  (completedTasks /
-                    (tasks.filter((task) => !task.isDeleted).length || 1)) *
-                  100
+                  (completedTasks / (userTasks.length || 1)) * 100
                 }
                 className="h-2 mt-2"
               />

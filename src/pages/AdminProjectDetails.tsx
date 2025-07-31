@@ -4,7 +4,8 @@ import { db } from "@/lib/firebase";
 import { useEffect, useRef, useState } from "react";
 import MilestoneCards from "@/components/MilestoneCards";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, CheckCircle, TimerIcon } from "lucide-react";
 import CreateMilestoneDialog, {
   CreateMilestoneDialogRef,
 } from "@/components/CreateMilestoneDialog";
@@ -18,6 +19,7 @@ const AdminProjectDetails = () => {
 
   const [project, setProject] = useState<any>(null);
   const [milestones, setMilestones] = useState([]);
+  const [taskStats, setTaskStats] = useState({ total: 0, completed: 0 });
 
   const milestoneRef = useRef<CreateMilestoneDialogRef>(null);
 
@@ -43,9 +45,9 @@ const AdminProjectDetails = () => {
     fetchMilestones();
   }, [projectId]);
 
-  // Fetch project details
+  // Fetch project details with task stats
   useEffect(() => {
-    const fetchProject = async () => {
+    const fetchProjectWithStats = async () => {
       if (!projectId) return;
       try {
         const docRef = doc(db, "projects", projectId);
@@ -53,12 +55,42 @@ const AdminProjectDetails = () => {
         if (snap.exists()) {
           setProject({ id: snap.id, ...snap.data() });
         }
+
+        // Calculate task statistics
+        const milestonesRef = collection(db, "projects", projectId, "milestones");
+        const milestonesSnap = await getDocs(milestonesRef);
+
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        await Promise.all(
+          milestonesSnap.docs.map(async (milestoneDoc) => {
+            const tasksRef = collection(
+              db,
+              "projects",
+              projectId,
+              "milestones",
+              milestoneDoc.id,
+              "tasks"
+            );
+            const tasksSnap = await getDocs(tasksRef);
+
+            const tasks = tasksSnap.docs
+              .map((taskDoc) => taskDoc.data())
+              .filter((task) => !task.isDeleted);
+
+            totalTasks += tasks.length;
+            completedTasks += tasks.filter((task) => task.status === "Completed").length;
+          })
+        );
+
+        setTaskStats({ total: totalTasks, completed: completedTasks });
       } catch (err) {
         console.error("Error fetching project:", err);
       }
     };
 
-    fetchProject();
+    fetchProjectWithStats();
   }, [projectId]);
 
   if (!project) return <div className="p-6">Loading...</div>;
@@ -99,7 +131,100 @@ const AdminProjectDetails = () => {
         onMilestoneCreated={fetchMilestones}
       />
 
-      {/* <p className="text-sm text-gray-600">{project.brief}</p> */}
+      {/* Project Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Task Progress */}
+            <Card className="h-full">
+              <CardContent className="p-4 h-full flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2 mt-6">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium">Tasks Progress</span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {taskStats.completed}/{taskStats.total}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%`}}
+                    ></div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-6">
+                    <TimerIcon className="w-5 h-5 text-red-600" />
+                    <span className="text-sm font-medium">Due Date</span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {project.endDate ? new Date(project.endDate?.seconds * 1000).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Project Info */}
+            <Card className="md:col-span-3 h-full">
+              <CardContent className="p-4 h-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2">
+                  <div>
+                    <p className="text-sm text-gray-500">Project Name</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Client</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.client}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Progress</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.progress}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Start Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.startDate ? new Date(project.startDate?.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">End Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.endDate ? new Date(project.endDate?.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Designer</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.designer}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Service Type</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.serviceType || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Amount Paid</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{project.paidAmount?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Milestone Cards */}
       <MilestoneCards

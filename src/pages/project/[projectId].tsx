@@ -117,44 +117,79 @@ const ProjectDetailPage = () => {
         </div>
       </div>
 
-      {/* Project Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold text-blue-600">
-              {project.progress}%
-            </p>
-            <p className="text-sm text-gray-600">Overall Progress</p>
-          </CardContent>
-        </Card>
+      {/* Project Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Project Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Task Progress */}
+            <Card className="h-full">
+              <CardContent className="p-4 h-full flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2 mt-6">
+                    <span className="text-sm font-medium">Tasks Progress</span>
+                  </div>
+                  <p className="text-2xl font-bold">
+                    {taskStats.completed}/{taskStats.total}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{width: `${taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0}%`}}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold text-green-600">
-              {taskStats.completed}/{taskStats.total}
-            </p>
-            <p className="text-sm text-gray-600">Tasks Completed</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold text-purple-600">
-              ₹{project.paidAmount?.toLocaleString() || 0}
-            </p>
-            <p className="text-sm text-gray-600">Amount Paid</p>
-          </CardContent>
-        </Card>
-
-        {/* <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold text-orange-600">
-              {project.revisionsUsed}/{project.maxRevisions}
-            </p>
-            <p className="text-sm text-gray-600">Revisions Used</p>
-          </CardContent>
-        </Card> */}
-      </div>
+            {/* Project Info */}
+            <Card className="md:col-span-3 h-full">
+              <CardContent className="p-4 h-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2">
+                  <div>
+                    <p className="text-sm text-gray-500">Project Name</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Client</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.client}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Progress</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {project.progress}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Start Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(project.startDate?.seconds * 1000).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">End Date</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(project.endDate?.seconds * 1000).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Amount Paid</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{project.paidAmount?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Milestones */}
       <Card>
