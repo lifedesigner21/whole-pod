@@ -42,7 +42,7 @@ type NewProject = {
   clientId: string;
   department: string;
   teamMembers: { id: string; name: string }[];
-  poc: string;
+  poc: { id: string; name: string };
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -75,7 +75,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     clientId: "",
     department: "",
     teamMembers: [],
-    poc: "",
+    poc: { id: "", name: "" },
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -260,7 +260,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: editProject.clientId || "",
         department: editProject.department || "",
         teamMembers: editProject.teamMembers || [],
-        poc: editProject.poc || "",
+        poc: editProject.poc || { id: "", name: "" },
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -278,7 +278,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: "",
         department: "",
         teamMembers: [],
-        poc: "",
+        poc: { id: "", name: "" },
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -432,7 +432,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           ...form,
           department: val,
           teamMembers: [], // Clear team members when department changes
-          poc: "" // Clear POC when department changes
+          poc: { id: "", name: "" } // Clear POC when department changes
         });
               }}
             >
@@ -481,8 +481,13 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             <div className="grid gap-1">
               <label className="text-sm font-medium text-gray-700">POC</label>
               <Select
-                value={form.poc}
-                onValueChange={(val) => setForm({ ...form, poc: val })}
+                value={form.poc.id}
+                onValueChange={(val) => {
+                  const selectedPoc = currentDepartmentUsers.find(u => u.id === val);
+                  if (selectedPoc) {
+                    setForm({ ...form, poc: { id: val, name: selectedPoc.name } });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select POC" />
