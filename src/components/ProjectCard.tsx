@@ -3,7 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, MessageSquare, IndianRupee, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  User,
+  MessageSquare,
+  IndianRupee,
+  Trash2,
+} from "lucide-react";
 import { Project } from "@/data/mockData";
 import { formatDate } from "@/lib/utils";
 import { doc, getDocs, updateDoc, collection } from "firebase/firestore";
@@ -122,7 +128,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
             <div className="flex items-center gap-2 text-gray-600">
               <User className="w-4 h-4" />
-              <span>POC: {project.designer}</span>
+              <span>Manager: {project.manager.name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <User className="w-4 h-4" />
+              <span>POC: {project.poc.name}</span>
             </div>
           </div>
 

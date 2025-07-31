@@ -103,7 +103,7 @@ const DepartmentDashboard = () => {
 
     const q = query(
       collection(db, "projects"),
-      where(fieldName, "==", user.uid)
+      where("teamMemberIds", "array-contains", user.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs
@@ -112,6 +112,7 @@ const DepartmentDashboard = () => {
           ...(doc.data() as any),
         }))
         .filter((project) => project.isDeleted !== true);
+        console.log("projectDep",projects)
       setDepartmentProjects(projects);
     });
     return () => unsubscribe();

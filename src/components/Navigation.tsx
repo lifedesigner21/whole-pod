@@ -115,11 +115,13 @@ const Navigation = () => {
   const getRoleDisplayName = (role: string | null) => {
     switch (role) {
       case "admin":
-        return "Administrator";
+        return "Super Admin";
       case "client":
         return "Client";
       case "designer":
         return "Designer";
+      case "developer":
+        return "Developer";
       default:
         return "User";
     }
@@ -133,6 +135,9 @@ const Navigation = () => {
         return "bg-blue-100 text-blue-800";
       case "designer":
         return "bg-green-100 text-green-800";
+      case "developer":
+        return "bg-orange-100 text-green-800";
+
       default:
         return "bg-gray-100 text-gray-800";
     }

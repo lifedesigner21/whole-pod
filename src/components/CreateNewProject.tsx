@@ -110,19 +110,19 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   };
 
   const handleTeamMemberToggle = (member: UserOption) => {
-    setForm(prev => {
+    setForm((prev) => {
       const currentMembers = prev.teamMembers;
-      const isSelected = currentMembers.some(m => m.id === member.id);
-      
+      const isSelected = currentMembers.some((m) => m.id === member.id);
+
       if (isSelected) {
         return {
           ...prev,
-          teamMembers: currentMembers.filter(m => m.id !== member.id)
+          teamMembers: currentMembers.filter((m) => m.id !== member.id),
         };
       } else {
         return {
           ...prev,
-          teamMembers: [...currentMembers, member]
+          teamMembers: [...currentMembers, member],
         };
       }
     });
@@ -193,6 +193,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           description: "Your project has been updated.",
         });
       } else {
+        // 🔔 Notifications for all team members
+        const { name, teamMembers, clientId } = form;
+
         const projectRef = await addDoc(collection(db, "projects"), {
           ...project,
           progress: 0,
@@ -206,21 +209,23 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           paidAmount: project.paidAmount,
           isDeleted: false,
           projectCreatedBy: user.uid,
+          teamMemberIds: teamMembers.map((member) => member.id),
         });
 
-        // 🔔 Notifications for all team members
-        const { name, teamMembers, clientId } = form;
-
         const allNotifications = [
-          ...teamMembers.map(member => ({ userId: member.id, role: form.department })),
-          { userId: clientId, role: 'client' }
+          ...teamMembers.map((member) => ({
+            userId: member.id,
+            role: form.department,
+          })),
+          { userId: clientId, role: "client" },
         ];
 
         for (const member of allNotifications) {
           await addDoc(collection(db, `users/${member.userId}/notifications`), {
-            message: member.role === 'client' 
-              ? `You have been added to the project: ${name}.`
-              : `You have been assigned to a new project: ${name}.`,
+            message:
+              member.role === "client"
+                ? `You have been added to the project: ${name}.`
+                : `You have been assigned to a new project: ${name}.`,
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
@@ -236,7 +241,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
-            createdBy: user.uid
+            createdBy: user.uid,
           });
         }
       }
@@ -300,7 +305,14 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const [clientSnap, designerSnap, developerSnap, legalSnap, managerSnap, allowedSnap] = await Promise.all([
+        const [
+          clientSnap,
+          designerSnap,
+          developerSnap,
+          legalSnap,
+          managerSnap,
+          allowedSnap,
+        ] = await Promise.all([
           getDocs(
             query(collection(db, "users"), where("role", "==", "client"))
           ),
@@ -439,17 +451,19 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           </div>
 
           <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">Department</label>
+            <label className="text-sm font-medium text-gray-700">
+              Department
+            </label>
             <Select
               value={form.department}
               required
               onValueChange={(val) => {
-        setForm({
-          ...form,
-          department: val,
-          teamMembers: [], // Clear team members when department changes
-          poc: { id: "", name: "" } // Clear POC when department changes
-        });
+                setForm({
+                  ...form,
+                  department: val,
+                  teamMembers: [], // Clear team members when department changes
+                  poc: { id: "", name: "" }, // Clear POC when department changes
+                });
               }}
             >
               <SelectTrigger>
@@ -466,19 +480,22 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           {form.department && (
             <div className="grid gap-2">
               <label className="text-sm font-medium text-gray-700">
-                {form.department === "design" ? "Designers" : 
-                 form.department === "development" ? "Developers" : 
-                 "Legal Team"} ({form.teamMembers.length} selected)
+                {form.department === "design"
+                  ? "Designers"
+                  : form.department === "development"
+                  ? "Developers"
+                  : "Legal Team"}{" "}
+                ({form.teamMembers.length} selected)
               </label>
               <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
                 {currentDepartmentUsers.map((member) => (
                   <div key={member.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`member-${member.id}`}
-                      checked={form.teamMembers.some(m => m.id === member.id)}
+                      checked={form.teamMembers.some((m) => m.id === member.id)}
                       onCheckedChange={() => handleTeamMemberToggle(member)}
                     />
-                    <label 
+                    <label
                       htmlFor={`member-${member.id}`}
                       className="text-sm cursor-pointer"
                     >
@@ -487,36 +504,73 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
                   </div>
                 ))}
                 {currentDepartmentUsers.length === 0 && (
-                  <p className="text-sm text-gray-500">No team members available</p>
+                  <p className="text-sm text-gray-500">
+                    No team members available
+                  </p>
                 )}
               </div>
             </div>
           )}
 
           {form.department && (
-            <div className="grid gap-1">
-              <label className="text-sm font-medium text-gray-700">POC</label>
-              <Select
-                value={form.poc.id}
-                onValueChange={(val) => {
-                  const selectedPoc = currentDepartmentUsers.find(u => u.id === val);
-                  if (selectedPoc) {
-                    setForm({ ...form, poc: { id: val, name: selectedPoc.name } });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select POC" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentDepartmentUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div className="grid gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Manager
+                </label>
+                <Select
+                  value={form.manager.id}
+                  onValueChange={(val) => {
+                    const selectedManager = managers.find((m) => m.id === val);
+                    if (selectedManager) {
+                      setForm({
+                        ...form,
+                        manager: { id: val, name: selectedManager.name },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {managers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1">
+                <label className="text-sm font-medium text-gray-700">POC</label>
+                <Select
+                  value={form.poc.id}
+                  onValueChange={(val) => {
+                    const selectedPoc = currentDepartmentUsers.find(
+                      (u) => u.id === val
+                    );
+                    if (selectedPoc) {
+                      setForm({
+                        ...form,
+                        poc: { id: val, name: selectedPoc.name },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select POC" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentDepartmentUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
 
           <div className="grid gap-1">
@@ -627,30 +681,6 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
               value={form.assetsLink}
               onChange={(e) => setForm({ ...form, assetsLink: e.target.value })}
             />
-          </div>
-
-          <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">Manager</label>
-            <Select
-              value={form.manager.id}
-              onValueChange={(val) => {
-                const selectedManager = managers.find(m => m.id === val);
-                if (selectedManager) {
-                  setForm({ ...form, manager: { id: val, name: selectedManager.name } });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Manager" />
-              </SelectTrigger>
-              <SelectContent>
-                {managers.map((manager) => (
-                  <SelectItem key={manager.id} value={manager.id}>
-                    {manager.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

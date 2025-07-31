@@ -69,7 +69,7 @@ const AdminDashboard = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState<any[]>([]);
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
-   const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
   const navigate = useNavigate();
@@ -286,7 +286,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Admin Dashboard
+            Super Admin Dashboard
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">
             Complete overview of all projects and operations
@@ -549,8 +549,22 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="lg:col-span-2">
+                    <p className="text-sm text-gray-600">Manager</p>
+                    <p className="font-medium">{project.manager.name}</p>
+                  </div>
+
+                  <div className="lg:col-span-2">
                     <p className="text-sm text-gray-600">POC</p>
                     <p className="font-medium">{project.poc.name}</p>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <p className="text-sm text-gray-600">Team Members</p>
+                    <ul className="list-disc list-inside font-medium text-sm text-gray-800">
+                      {project.teamMembers?.map((member: any) => (
+                        <li key={member.id}>{member.name}</li>
+                      ))}
+                    </ul>
                   </div>
 
                   <div className="lg:col-span-2">
