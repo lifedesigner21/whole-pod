@@ -16,6 +16,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   addDoc,
   collection,
@@ -39,12 +40,9 @@ type NewProject = {
   name: string;
   client: string;
   clientId: string;
-  designer: string;
-  designerId: string;
-  developer: string;
-  developerId: string;
-  legalTeam: string;
-  legalId: string;
+  designers: { id: string; name: string }[];
+  developers: { id: string; name: string }[];
+  legalTeam: { id: string; name: string }[];
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -75,12 +73,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     name: "",
     client: "",
     clientId: "",
-    designer: "",
-    designerId: "",
-    developer: "",
-    developerId: "",
-    legalTeam: "",
-    legalId: "",
+    designers: [],
+    developers: [],
+    legalTeam: [],
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -98,12 +93,34 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
   const { user } = useAuth();
 
+  const handleTeamMemberToggle = (
+    member: UserOption,
+    department: 'designers' | 'developers' | 'legalTeam'
+  ) => {
+    setForm(prev => {
+      const currentMembers = prev[department];
+      const isSelected = currentMembers.some(m => m.id === member.id);
+      
+      if (isSelected) {
+        return {
+          ...prev,
+          [department]: currentMembers.filter(m => m.id !== member.id)
+        };
+      } else {
+        return {
+          ...prev,
+          [department]: [...currentMembers, member]
+        };
+      }
+    });
+  };
+
   const handleSubmit = async () => {
     // ✅ Validate required fields before proceeding
     if (
       !form.name ||
       !form.clientId ||
-      !form.designerId ||
+      form.designers.length === 0 ||
       !form.totalAmount ||
       !form.brief ||
       !form.startDate ||
@@ -177,31 +194,21 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           projectCreatedBy: user.uid,
         });
 
-        // 🔔 Notifications
-        const { name, designerId, developerId, legalId, clientId } = form;
+        // 🔔 Notifications for all team members
+        const { name, designers, developers, legalTeam, clientId } = form;
 
-        const notifications = [
-          designerId && {
-            userId: designerId,
-            message: `You have been assigned to a new project: ${name}.`,
-          },
-          developerId && {
-            userId: developerId,
-            message: `You have been assigned to a new project: ${name}.`,
-          },
-          legalId && {
-            userId: legalId,
-            message: `You have been assigned to a new project: ${name}.`,
-          },
-          {
-            userId: clientId,
-            message: `You have been added to the project: ${name}.`,
-          },
-        ].filter(Boolean);
+        const allTeamMembers = [
+          ...designers.map(d => ({ userId: d.id, role: 'designer' })),
+          ...developers.map(d => ({ userId: d.id, role: 'developer' })),
+          ...legalTeam.map(l => ({ userId: l.id, role: 'legal team' })),
+          { userId: clientId, role: 'client' }
+        ];
 
-        for (const notif of notifications) {
-          await addDoc(collection(db, `users/${notif.userId}/notifications`), {
-            message: notif.message,
+        for (const member of allTeamMembers) {
+          await addDoc(collection(db, `users/${member.userId}/notifications`), {
+            message: member.role === 'client' 
+              ? `You have been added to the project: ${name}.`
+              : `You have been assigned to a new project: ${name}.`,
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
@@ -217,7 +224,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             type: "project",
             read: false,
             createdAt: Timestamp.now(),
-            createdBy:user.uid
+            createdBy: user.uid
           });
         }
       }
@@ -242,12 +249,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         name: editProject.name || "",
         client: editProject.client || "",
         clientId: editProject.clientId || "",
-        designer: editProject.designer || "",
-        designerId: editProject.designerId || "",
-        developer: editProject.developer || "",
-        developerId: editProject.developerId || "",
-        legalTeam: editProject.legalTeam || "",
-        legalId: editProject.legalId || "",
+        designers: editProject.designers || [],
+        developers: editProject.developers || [],
+        legalTeam: editProject.legalTeam || [],
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -263,12 +267,9 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         name: "",
         client: "",
         clientId: "",
-        designer: "",
-        designerId: "",
-        developer: "",
-        developerId: "",
-        legalTeam: "",
-        legalId: "",
+        designers: [],
+        developers: [],
+        legalTeam: [],
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -410,89 +411,82 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             />
           </div>
 
-          <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">Designer</label>
-            <Select
-              value={form.designerId}
-              required
-              onValueChange={(val) => {
-                const selectedDesigner = designers.find((d) => d.id === val);
-                if (selectedDesigner) {
-                  setForm({
-                    ...form,
-                    designerId: val,
-                    designer: selectedDesigner.name,
-                  });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Designer" />
-              </SelectTrigger>
-              <SelectContent>
-                {designers.map((designer) => (
-                  <SelectItem key={designer.id} value={designer.id}>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Designers ({form.designers.length} selected)
+            </label>
+            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
+              {designers.map((designer) => (
+                <div key={designer.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`designer-${designer.id}`}
+                    checked={form.designers.some(d => d.id === designer.id)}
+                    onCheckedChange={() => handleTeamMemberToggle(designer, 'designers')}
+                  />
+                  <label 
+                    htmlFor={`designer-${designer.id}`}
+                    className="text-sm cursor-pointer"
+                  >
                     {designer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </label>
+                </div>
+              ))}
+              {designers.length === 0 && (
+                <p className="text-sm text-gray-500">No designers available</p>
+              )}
+            </div>
           </div>
 
-          <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">Developer</label>
-            <Select
-              value={form.developerId}
-              onValueChange={(val) => {
-                const selectedDeveloper = developers.find((d) => d.id === val);
-                if (selectedDeveloper) {
-                  setForm({
-                    ...form,
-                    developerId: val,
-                    developer: selectedDeveloper.name,
-                  });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Developer (Optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {developers.map((developer) => (
-                  <SelectItem key={developer.id} value={developer.id}>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Developers ({form.developers.length} selected)
+            </label>
+            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
+              {developers.map((developer) => (
+                <div key={developer.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`developer-${developer.id}`}
+                    checked={form.developers.some(d => d.id === developer.id)}
+                    onCheckedChange={() => handleTeamMemberToggle(developer, 'developers')}
+                  />
+                  <label 
+                    htmlFor={`developer-${developer.id}`}
+                    className="text-sm cursor-pointer"
+                  >
                     {developer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </label>
+                </div>
+              ))}
+              {developers.length === 0 && (
+                <p className="text-sm text-gray-500">No developers available</p>
+              )}
+            </div>
           </div>
 
-          <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">Legal Team</label>
-            <Select
-              value={form.legalId}
-              onValueChange={(val) => {
-                const selectedLegal = legalTeam.find((l) => l.id === val);
-                if (selectedLegal) {
-                  setForm({
-                    ...form,
-                    legalId: val,
-                    legalTeam: selectedLegal.name,
-                  });
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Legal Team (Optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {legalTeam.map((legal) => (
-                  <SelectItem key={legal.id} value={legal.id}>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Legal Team ({form.legalTeam.length} selected)
+            </label>
+            <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
+              {legalTeam.map((legal) => (
+                <div key={legal.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`legal-${legal.id}`}
+                    checked={form.legalTeam.some(l => l.id === legal.id)}
+                    onCheckedChange={() => handleTeamMemberToggle(legal, 'legalTeam')}
+                  />
+                  <label 
+                    htmlFor={`legal-${legal.id}`}
+                    className="text-sm cursor-pointer"
+                  >
                     {legal.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </label>
+                </div>
+              ))}
+              {legalTeam.length === 0 && (
+                <p className="text-sm text-gray-500">No legal team members available</p>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-1">
