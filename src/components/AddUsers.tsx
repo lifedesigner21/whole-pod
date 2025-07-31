@@ -17,7 +17,7 @@ interface AllowedUser {
   id: string;
   email: string;
   name: string;
-  role: "client" | "designer" | "developer" | "legalteam" | "admin";
+  role: "client" | "designer" | "developer" | "legalteam" | "admin"| "manager";
   department?: string;
 }
 
@@ -29,7 +29,7 @@ interface AddUserProps {
 const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"client" | "designer" | "developer" | "legalteam" | "admin">("designer");
+  const [role, setRole] = useState<"client" | "designer" | "developer" | "legalteam" | "admin" |"manager">("designer");
   const [department, setDepartment] = useState("");
 
   const isEditMode = !!editUser;
@@ -81,7 +81,7 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         email: email.trim().toLowerCase(),
         name: name.trim(),
         role,
-        ...(["designer", "developer", "legalteam"].includes(role) && department && { department }),
+        ...(["designer", "developer", "legalteam","admin", "manager"].includes(role) && department && { department }),
       };
 
       if (isEditMode && editUser) {
@@ -142,8 +142,8 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         <Select
           value={role}
           onValueChange={(value) => {
-            setRole(value as "client" | "designer" | "developer" | "legalteam" | "admin");
-            if (!["designer", "developer", "legalteam"].includes(value)) {
+            setRole(value as "client" | "designer" | "developer" | "legalteam" | "admin" | "manager");
+            if (!["designer", "developer", "legalteam","admin"].includes(value)) {
               setDepartment("");
             }
           }}
@@ -156,11 +156,12 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
             <SelectItem value="designer">Designer</SelectItem>
             <SelectItem value="developer">Developer</SelectItem>
             <SelectItem value="legalteam">Legal Team</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
         
-        {["designer", "developer", "legalteam"].includes(role) && (
+        {["designer", "developer", "legalteam","admin", "manager"].includes(role) && (
           <Select
             value={department}
             onValueChange={(value) => setDepartment(value)}
@@ -172,6 +173,7 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
               <SelectItem value="design">Design</SelectItem>
               <SelectItem value="development">Development</SelectItem>
               <SelectItem value="legal">Legal</SelectItem>
+              <SelectItem value="admin">Administration</SelectItem>
             </SelectContent>
           </Select>
         )}

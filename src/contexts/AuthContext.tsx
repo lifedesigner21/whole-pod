@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  userRole: 'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null;
+  userRole: 'admin' | 'client' | 'designer' | 'developer' | 'legalteam' |'manager' | null;
   userDepartment: string | null;
 }
 
@@ -28,7 +28,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | 'developer' | 'legalteam'|'manager' | null>(null);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const docSnap = await getDoc(doc(db, 'users', user.uid));
           if (docSnap.exists()) {
             const userData = docSnap.data();
-            const role = userData.role as 'admin' | 'client' | 'designer' | 'developer' | 'legalteam';
+            const role = userData.role as 'admin' | 'client' | 'designer' | 'developer' | 'legalteam'| 'manager';
             const department = userData.department || null;
             setUserRole(role);
             setUserDepartment(department);
