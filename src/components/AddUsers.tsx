@@ -17,7 +17,8 @@ interface AllowedUser {
   id: string;
   email: string;
   name: string;
-  role: "client" | "designer" | "admin";
+  role: "client" | "designer" | "developer" | "legalteam" | "admin";
+  department?: string;
 }
 
 interface AddUserProps {
@@ -28,7 +29,8 @@ interface AddUserProps {
 const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"client" | "designer" | "admin">("designer");
+  const [role, setRole] = useState<"client" | "designer" | "developer" | "legalteam" | "admin">("designer");
+  const [department, setDepartment] = useState("");
 
   const isEditMode = !!editUser;
 
@@ -37,10 +39,12 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
       setEmail(editUser.email);
       setName(editUser.name);
       setRole(editUser.role);
+      setDepartment(editUser.department || "");
     } else {
       setEmail("");
       setName("");
       setRole("designer");
+      setDepartment("");
     }
   }, [editUser]);
 
@@ -73,13 +77,16 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
     }
 
     try {
+      const userData = {
+        email: email.trim().toLowerCase(),
+        name: name.trim(),
+        role,
+        ...(["designer", "developer", "legalteam"].includes(role) && department && { department }),
+      };
+
       if (isEditMode && editUser) {
         // Update existing user
-        await updateDoc(doc(db, "allowedUsers", editUser.id), {
-          email: email.trim().toLowerCase(),
-          name: name.trim(),
-          role,
-        });
+        await updateDoc(doc(db, "allowedUsers", editUser.id), userData);
 
         toast({
           title: "Success",
@@ -87,11 +94,7 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         });
       } else {
         // Add new user
-        await addDoc(collection(db, "allowedUsers"), {
-          email: email.trim().toLowerCase(),
-          name: name.trim(),
-          role,
-        });
+        await addDoc(collection(db, "allowedUsers"), userData);
 
         toast({
           title: "Success",
@@ -103,6 +106,7 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
       setEmail("");
       setName("");
       setRole("designer");
+      setDepartment("");
       // Close the dialog
       onClose();
     } catch (error) {
@@ -137,9 +141,12 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
         />
         <Select
           value={role}
-          onValueChange={(value) =>
-            setRole(value as "client" | "designer" | "admin")
-          }
+          onValueChange={(value) => {
+            setRole(value as "client" | "designer" | "developer" | "legalteam" | "admin");
+            if (!["designer", "developer", "legalteam"].includes(value)) {
+              setDepartment("");
+            }
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select role" />
@@ -147,9 +154,27 @@ const AddUser: React.FC<AddUserProps> = ({ onClose, editUser }) => {
           <SelectContent>
             <SelectItem value="client">Client</SelectItem>
             <SelectItem value="designer">Designer</SelectItem>
+            <SelectItem value="developer">Developer</SelectItem>
+            <SelectItem value="legalteam">Legal Team</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
+        
+        {["designer", "developer", "legalteam"].includes(role) && (
+          <Select
+            value={department}
+            onValueChange={(value) => setDepartment(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="design">Design</SelectItem>
+              <SelectItem value="development">Development</SelectItem>
+              <SelectItem value="legal">Legal</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <Button onClick={handleSubmit}>
           {isEditMode ? "Update User" : "Add User"}
         </Button>

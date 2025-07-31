@@ -36,9 +36,10 @@ interface CreateSubtaskDialogProps {
   taskId: string;
 }
 
-interface Designer {
+interface DepartmentUser {
   id: string;
   name: string;
+  role: string;
 }
 
 const statusOptions = ["To Do", "In Progress", "In Review", "Completed"];
@@ -49,7 +50,7 @@ const CreateSubtaskDialog: React.FC<CreateSubtaskDialogProps> = ({
   taskId,
 }) => {
   const [open, setOpen] = useState(false);
-  const [designers, setDesigners] = useState<Designer[]>([]);
+  const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
   const [form, setForm] = useState({
     name: "",
     brief: "",
@@ -61,34 +62,47 @@ const CreateSubtaskDialog: React.FC<CreateSubtaskDialogProps> = ({
   });
 
   useEffect(() => {
-    const fetchDesigners = async () => {
+    const fetchDepartmentUsers = async () => {
       try {
-        const designerSnap = await getDocs(
-          query(collection(db, "users"), where("role", "==", "designer"))
-        );
+        const [designerSnap, developerSnap, legalSnap] = await Promise.all([
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "designer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "developer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "legalteam"))
+          ),
+        ]);
 
-        const designerList = designerSnap.docs.map((doc) => ({
+        const allUsers = [
+          ...designerSnap.docs,
+          ...developerSnap.docs,
+          ...legalSnap.docs,
+        ].map((doc) => ({
           id: doc.id,
-          name: doc.data().name,
+          name: doc.data().name || "Unnamed",
+          role: doc.data().role || "unknown",
         }));
 
-        setDesigners(designerList);
+        setDepartmentUsers(allUsers);
       } catch (err) {
-        console.error("Error fetching designers:", err);
+        console.error("Error fetching department users:", err);
       }
     };
 
-    fetchDesigners();
+    fetchDepartmentUsers();
   }, []);
 
   const handleSubmit = async () => {
-    const selectedDesigner = designers.find((d) => d.id === form.designerId);
+    const selectedUser = departmentUsers.find((d) => d.id === form.designerId);
 
     const subtask = {
       ...form,
       estimatedHours: Number(form.estimatedHours),
       isApproved: false,
-      designerName: selectedDesigner?.name || "",
+      designerName: selectedUser?.name || "",
     };
 
     const taskRef = doc(
@@ -184,18 +198,18 @@ const CreateSubtaskDialog: React.FC<CreateSubtaskDialogProps> = ({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Designer</label>
+            <label className="text-sm font-medium">Assign To</label>
             <Select
               value={form.designerId}
               onValueChange={(val) => setForm({ ...form, designerId: val })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select Designer" />
+                <SelectValue placeholder="Select Team Member" />
               </SelectTrigger>
               <SelectContent className="z-50 max-h-[200px] overflow-y-auto">
-                {designers.map((d) => (
+                {departmentUsers.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
-                    {d.name}
+                    {d.name} ({d.role})
                   </SelectItem>
                 ))}
               </SelectContent>

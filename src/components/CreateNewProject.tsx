@@ -41,6 +41,10 @@ type NewProject = {
   clientId: string;
   designer: string;
   designerId: string;
+  developer: string;
+  developerId: string;
+  legalTeam: string;
+  legalId: string;
   status: string;
   totalAmount: string;
   paidAmount: string;
@@ -73,6 +77,10 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     clientId: "",
     designer: "",
     designerId: "",
+    developer: "",
+    developerId: "",
+    legalTeam: "",
+    legalId: "",
     status: "Active",
     totalAmount: "",
     paidAmount: "",
@@ -86,6 +94,8 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
   const [clients, setClients] = useState<UserOption[]>([]);
   const [designers, setDesigners] = useState<UserOption[]>([]);
+  const [developers, setDevelopers] = useState<UserOption[]>([]);
+  const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
   const { user } = useAuth();
 
   const handleSubmit = async () => {
@@ -168,18 +178,26 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         });
 
         // 🔔 Notifications
-        const { name, designerId, clientId } = form;
+        const { name, designerId, developerId, legalId, clientId } = form;
 
         const notifications = [
-          {
+          designerId && {
             userId: designerId,
+            message: `You have been assigned to a new project: ${name}.`,
+          },
+          developerId && {
+            userId: developerId,
+            message: `You have been assigned to a new project: ${name}.`,
+          },
+          legalId && {
+            userId: legalId,
             message: `You have been assigned to a new project: ${name}.`,
           },
           {
             userId: clientId,
             message: `You have been added to the project: ${name}.`,
           },
-        ];
+        ].filter(Boolean);
 
         for (const notif of notifications) {
           await addDoc(collection(db, `users/${notif.userId}/notifications`), {
@@ -226,6 +244,10 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: editProject.clientId || "",
         designer: editProject.designer || "",
         designerId: editProject.designerId || "",
+        developer: editProject.developer || "",
+        developerId: editProject.developerId || "",
+        legalTeam: editProject.legalTeam || "",
+        legalId: editProject.legalId || "",
         status: editProject.status || "Active",
         totalAmount: editProject.totalAmount?.toString() || "",
         paidAmount: editProject.paidAmount?.toString() || "",
@@ -243,6 +265,10 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         clientId: "",
         designer: "",
         designerId: "",
+        developer: "",
+        developerId: "",
+        legalTeam: "",
+        legalId: "",
         status: "Active",
         totalAmount: "",
         paidAmount: "",
@@ -259,12 +285,18 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const [clientSnap, designerSnap, allowedSnap] = await Promise.all([
+        const [clientSnap, designerSnap, developerSnap, legalSnap, allowedSnap] = await Promise.all([
           getDocs(
             query(collection(db, "users"), where("role", "==", "client"))
           ),
           getDocs(
             query(collection(db, "users"), where("role", "==", "designer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "developer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "legalteam"))
           ),
           getDocs(collection(db, "allowedUsers")),
         ]);
@@ -287,8 +319,24 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             name: doc.data().name,
           }));
 
+        const filteredDevelopers = developerSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name,
+          }));
+
+        const filteredLegal = legalSnap.docs
+          .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+          .map((doc) => ({
+            id: doc.id,
+            name: doc.data().name,
+          }));
+
         setClients(filteredClients);
         setDesigners(filteredDesigners);
+        setDevelopers(filteredDevelopers);
+        setLegalTeam(filteredLegal);
       } catch (error) {
         console.error("Error fetching users:", error);
       }
@@ -363,7 +411,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
           </div>
 
           <div className="grid gap-1">
-            <label className="text-sm font-medium text-gray-700">POC</label>
+            <label className="text-sm font-medium text-gray-700">Designer</label>
             <Select
               value={form.designerId}
               required
@@ -385,6 +433,62 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
                 {designers.map((designer) => (
                   <SelectItem key={designer.id} value={designer.id}>
                     {designer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium text-gray-700">Developer</label>
+            <Select
+              value={form.developerId}
+              onValueChange={(val) => {
+                const selectedDeveloper = developers.find((d) => d.id === val);
+                if (selectedDeveloper) {
+                  setForm({
+                    ...form,
+                    developerId: val,
+                    developer: selectedDeveloper.name,
+                  });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Developer (Optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {developers.map((developer) => (
+                  <SelectItem key={developer.id} value={developer.id}>
+                    {developer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-1">
+            <label className="text-sm font-medium text-gray-700">Legal Team</label>
+            <Select
+              value={form.legalId}
+              onValueChange={(val) => {
+                const selectedLegal = legalTeam.find((l) => l.id === val);
+                if (selectedLegal) {
+                  setForm({
+                    ...form,
+                    legalId: val,
+                    legalTeam: selectedLegal.name,
+                  });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Legal Team (Optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {legalTeam.map((legal) => (
+                  <SelectItem key={legal.id} value={legal.id}>
+                    {legal.name}
                   </SelectItem>
                 ))}
               </SelectContent>

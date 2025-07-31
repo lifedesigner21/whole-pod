@@ -80,6 +80,8 @@ const CreateMilestoneDialog = forwardRef<
     const [isEdit, setIsEdit] = useState(false);
 
     const [designers, setDesigners] = useState<UserOption[]>([]);
+    const [developers, setDevelopers] = useState<UserOption[]>([]);
+    const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
     const [clients, setClients] = useState<UserOption[]>([]);
     const { user } = useAuth();
 
@@ -107,9 +109,15 @@ const CreateMilestoneDialog = forwardRef<
     useEffect(() => {
       const fetchUsers = async () => {
         try {
-          const [designerSnap, clientSnap, allowedSnap] = await Promise.all([
+          const [designerSnap, developerSnap, legalSnap, clientSnap, allowedSnap] = await Promise.all([
             getDocs(
               query(collection(db, "users"), where("role", "==", "designer"))
+            ),
+            getDocs(
+              query(collection(db, "users"), where("role", "==", "developer"))
+            ),
+            getDocs(
+              query(collection(db, "users"), where("role", "==", "legalteam"))
             ),
             getDocs(
               query(collection(db, "users"), where("role", "==", "client"))
@@ -128,6 +136,20 @@ const CreateMilestoneDialog = forwardRef<
               name: doc.data().name || "Unnamed",
             }));
 
+          const filteredDevelopers = developerSnap.docs
+            .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+            .map((doc) => ({
+              id: doc.id,
+              name: doc.data().name || "Unnamed",
+            }));
+
+          const filteredLegal = legalSnap.docs
+            .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
+            .map((doc) => ({
+              id: doc.id,
+              name: doc.data().name || "Unnamed",
+            }));
+
           const filteredClients = clientSnap.docs
             .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
             .map((doc) => ({
@@ -136,6 +158,8 @@ const CreateMilestoneDialog = forwardRef<
             }));
 
           setDesigners(filteredDesigners);
+          setDevelopers(filteredDevelopers);
+          setLegalTeam(filteredLegal);
           setClients(filteredClients);
         } catch (err) {
           console.error("Error fetching users:", err);

@@ -7,12 +7,14 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   userRole: 'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null;
+  userDepartment: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   userRole: null,
+  userDepartment: null,
 });
 
 export const useAuth = () => {
@@ -27,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<'admin' | 'client' | 'designer' | 'developer' | 'legalteam' | null>(null);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -36,17 +39,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const docSnap = await getDoc(doc(db, 'users', user.uid));
           if (docSnap.exists()) {
-            const role = docSnap.data().role as 'admin' | 'client' | 'designer' | 'developer' | 'legalteam';
+            const userData = docSnap.data();
+            const role = userData.role as 'admin' | 'client' | 'designer' | 'developer' | 'legalteam';
+            const department = userData.department || null;
             setUserRole(role);
+            setUserDepartment(department);
           } else {
             setUserRole(null);
+            setUserDepartment(null);
           }
         } catch (err) {
           console.error('Error fetching user role:', err);
           setUserRole(null);
+          setUserDepartment(null);
         }
       } else {
         setUserRole(null);
+        setUserDepartment(null);
       }
 
       setLoading(false);
@@ -56,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole }}>
+    <AuthContext.Provider value={{ user, loading, userRole, userDepartment }}>
       {children}
     </AuthContext.Provider>
   );

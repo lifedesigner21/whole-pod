@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const [selectedRole, setSelectedRole] = useState<
-    "client" | "designer" | "admin" | null
+    "client" | "designer" | "developer" | "legalteam" | "admin" | null
   >(null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -113,7 +113,19 @@ const LoginPage = () => {
                 className="w-full"
                 onClick={() => setSelectedRole("designer")}
               >
-                Employee Portal
+                Designer Portal
+              </Button>
+              <Button
+                className="w-full"
+                onClick={() => setSelectedRole("developer")}
+              >
+                Developer Portal
+              </Button>
+              <Button
+                className="w-full"
+                onClick={() => setSelectedRole("legalteam")}
+              >
+                Legal Team Portal
               </Button>
               <Button
                 className="w-full"

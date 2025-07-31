@@ -42,9 +42,10 @@ interface CreateTaskDialogProps {
   milestoneName?: string;
 }
 
-interface DesignerUser {
+interface DepartmentUser {
   id: string;
   name: string;
+  role: string;
 }
 
 const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
@@ -55,7 +56,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   taskToEdit,
 }) => {
   const { userRole, user } = useAuth();
-  const [designers, setDesigners] = useState<DesignerUser[]>([]);
+  const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -69,11 +70,17 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const fetchDesigners = async () => {
+    const fetchDepartmentUsers = async () => {
       try {
-        const [designerSnap, allowedSnap] = await Promise.all([
+        const [designerSnap, developerSnap, legalSnap, allowedSnap] = await Promise.all([
           getDocs(
             query(collection(db, "users"), where("role", "==", "designer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "developer"))
+          ),
+          getDocs(
+            query(collection(db, "users"), where("role", "==", "legalteam"))
           ),
           getDocs(collection(db, "allowedUsers")),
         ]);
@@ -82,20 +89,25 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
           allowedSnap.docs.map((doc) => doc.data().email?.toLowerCase())
         );
 
-        const filteredDesigners: DesignerUser[] = designerSnap.docs
+        const allUsers: DepartmentUser[] = [
+          ...designerSnap.docs,
+          ...developerSnap.docs,
+          ...legalSnap.docs,
+        ]
           .filter((doc) => allowedEmails.has(doc.data().email?.toLowerCase()))
           .map((doc) => ({
             id: doc.id,
             name: doc.data().name || "Unnamed",
+            role: doc.data().role || "unknown",
           }));
 
-        setDesigners(filteredDesigners);
+        setDepartmentUsers(allUsers);
       } catch (error) {
-        console.error("Error fetching allowed designers:", error);
+        console.error("Error fetching department users:", error);
       }
     };
 
-    fetchDesigners();
+    fetchDepartmentUsers();
   }, []);
 
   // Pre-fill form if editing
@@ -160,7 +172,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       });
       return;
     }
-    const assignedUser = designers.find((d) => d.id === form.assignedTo);
+    const assignedUser = departmentUsers.find((d) => d.id === form.assignedTo);
     const taskData = {
       title: form.title,
       description: form.description,
@@ -243,7 +255,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       {!taskToEdit && (
         <DialogTrigger asChild>
-          {userRole !== "designer" && (
+          {!["designer", "developer", "legalteam"].includes(userRole) && (
             <Button variant="default" onClick={() => setOpen(true)}>
               + Create Task
             </Button>
@@ -305,12 +317,12 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             onValueChange={(val) => setForm({ ...form, assignedTo: val })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select Designer" />
+              <SelectValue placeholder="Select Team Member" />
             </SelectTrigger>
             <SelectContent>
-              {designers.map((user) => (
+              {departmentUsers.map((user) => (
                 <SelectItem key={user.id} value={user.id}>
-                  {user.name}
+                  {user.name} ({user.role})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -341,7 +353,7 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="To Do">To Do</SelectItem>
-              {userRole !== "admin" && (
+              {userRole === "admin" ? null : (
                 <>
                   <SelectItem value="In Progress">In Progress</SelectItem>
                   <SelectItem value="Info Required">Info Required</SelectItem>
