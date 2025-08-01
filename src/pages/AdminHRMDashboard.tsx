@@ -11,6 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,7 +26,7 @@ import {
 } from "@/components/ui/table";
 import {
   Users,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   AlertCircle,
   Search,
@@ -83,6 +89,7 @@ const AdminHRMDashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [attendanceData, setAttendanceData] = useState<EmployeeAttendance[]>([]);
 
   // Fetch users
@@ -130,15 +137,16 @@ const AdminHRMDashboard = () => {
       console.log("🔍 Starting attendance calculation for", users.length, "users");
       console.log("📊 Total tasks:", tasks.length);
       console.log("📋 Total leave requests:", leaveRequests.length);
+      console.log("📅 Selected date:", selectedDate);
       
       const attendance: EmployeeAttendance[] = users.map((user) => {
         console.log(`\n👤 Calculating attendance for: ${user.name} (ID: ${user.id})`);
         
-        // Check if user has completed any task today
+        // Check if user has completed any task on selected date
         const userTasks = tasks.filter((task) => task.assignedTo === user.id);
         console.log(`📝 User has ${userTasks.length} total tasks assigned`);
         
-        const todayTasks = tasks.filter((task) => {
+        const selectedDateTasks = tasks.filter((task) => {
           if (task.assignedTo !== user.id) return false;
           
           // Check if task is completed
@@ -158,11 +166,11 @@ const AdminHRMDashboard = () => {
                 task.completedAt.toDate() : 
                 new Date(task.completedAt.seconds * 1000);
               
-              const isCompletedToday = isToday(completedDate);
-              if (isCompletedToday) {
-                console.log(`✅ Task completed today (with completedAt): ${task.id} at ${completedDate}`);
+              const isSameDate = completedDate.toDateString() === selectedDate.toDateString();
+              if (isSameDate) {
+                console.log(`✅ Task completed on selected date (with completedAt): ${task.id} at ${completedDate}`);
               }
-              return isCompletedToday;
+              return isSameDate;
             } catch (error) {
               console.error("❌ Error processing completedAt date:", error, task);
               return false;
@@ -170,7 +178,7 @@ const AdminHRMDashboard = () => {
           }
           
           // Case 2: Task is marked as completed but no completedAt timestamp
-          // Check if it was created/updated today (fallback)
+          // Check if it was created/updated on selected date (fallback)
           if (task.createdAt) {
             try {
               let dateToCheck;
@@ -187,11 +195,11 @@ const AdminHRMDashboard = () => {
                 return false;
               }
               
-              const isCreatedToday = isToday(dateToCheck);
-              if (isCreatedToday) {
-                console.log(`✅ Task completed today (using createdAt as fallback): ${task.id} at ${dateToCheck}`);
+              const isSameDate = dateToCheck.toDateString() === selectedDate.toDateString();
+              if (isSameDate) {
+                console.log(`✅ Task completed on selected date (using createdAt as fallback): ${task.id} at ${dateToCheck}`);
               }
-              return isCreatedToday;
+              return isSameDate;
             } catch (error) {
               console.error("❌ Error processing createdAt date:", error, task);
               return false;
@@ -202,13 +210,13 @@ const AdminHRMDashboard = () => {
           return false;
         });
         
-        console.log(`📅 Tasks completed today: ${todayTasks.length}`);
+        console.log(`📅 Tasks completed on selected date: ${selectedDateTasks.length}`);
 
-        // Check if user has leave request for today
+        // Check if user has leave request for selected date
         const userLeaves = leaveRequests.filter((leave) => leave.userId === user.id);
         console.log(`🏖️ User has ${userLeaves.length} total leave requests`);
         
-        const todayLeave = leaveRequests.find((leave) => {
+        const selectedDateLeave = leaveRequests.find((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
           if (!leave.leaveFrom || !leave.leaveTo) return false;
           
@@ -238,26 +246,25 @@ const AdminHRMDashboard = () => {
               return false;
             }
             
-            const today = new Date();
             // Reset time to compare only dates
-            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
             const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
             const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
             
-            const isOnLeaveToday = todayDate >= startDateOnly && todayDate <= endDateOnly;
-            if (isOnLeaveToday) {
-              console.log(`🏖️ On leave today: ${leave.leaveType} from ${startDate} to ${endDate}`);
+            const isOnLeaveOnSelectedDate = selectedDateOnly >= startDateOnly && selectedDateOnly <= endDateOnly;
+            if (isOnLeaveOnSelectedDate) {
+              console.log(`🏖️ On leave on selected date: ${leave.leaveType} from ${startDate} to ${endDate}`);
             }
-            return isOnLeaveToday;
+            return isOnLeaveOnSelectedDate;
           } catch (error) {
             console.error("❌ Error processing leave date:", error, leave);
             return false;
           }
         });
 
-        // Calculate leaves taken this month
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        // Calculate leaves taken in selected month
+        const selectedMonth = selectedDate.getMonth();
+        const selectedYear = selectedDate.getFullYear();
         
         const leavesThisMonth = leaveRequests.filter((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
@@ -276,8 +283,8 @@ const AdminHRMDashboard = () => {
               return false;
             }
             
-            return leaveDate.getMonth() === currentMonth && 
-                   leaveDate.getFullYear() === currentYear;
+            return leaveDate.getMonth() === selectedMonth && 
+                   leaveDate.getFullYear() === selectedYear;
           } catch (error) {
             console.error("❌ Error processing leave date for month calculation:", error);
             return false;
@@ -288,13 +295,13 @@ const AdminHRMDashboard = () => {
         let status: "Present" | "On Leave" | "Absent";
         let leaveType: string | undefined;
 
-        if (todayLeave) {
+        if (selectedDateLeave) {
           status = "On Leave";
-          leaveType = todayLeave.leaveType;
+          leaveType = selectedDateLeave.leaveType;
           console.log(`📊 Final status: ON LEAVE (${leaveType})`);
-        } else if (todayTasks.length > 0) {
+        } else if (selectedDateTasks.length > 0) {
           status = "Present";
-          console.log(`📊 Final status: PRESENT (${todayTasks.length} tasks completed today)`);
+          console.log(`📊 Final status: PRESENT (${selectedDateTasks.length} tasks completed on selected date)`);
         } else {
           status = "Absent";
           console.log(`📊 Final status: ABSENT (no tasks completed, no approved leave)`);
@@ -305,7 +312,7 @@ const AdminHRMDashboard = () => {
           status,
           leaveType,
           leavesTakenThisMonth: leavesThisMonth,
-          leavesRemaining: (user.leaveQuota || 12) - leavesThisMonth,
+          leavesRemaining: 2 - leavesThisMonth, // Changed from 12 to 2
         };
       });
 
@@ -320,7 +327,7 @@ const AdminHRMDashboard = () => {
     if (users.length > 0) {
       calculateAttendance();
     }
-  }, [users, leaveRequests, tasks]);
+  }, [users, leaveRequests, tasks, selectedDate]);
 
   // Filter attendance data
   const filteredAttendance = attendanceData.filter((item) => {
@@ -335,10 +342,10 @@ const AdminHRMDashboard = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  // Calculate stats
+  // Calculate stats for selected date
   const totalEmployees = users.length;
-  const presentToday = attendanceData.filter((item) => item.status === "Present").length;
-  const onLeaveToday = attendanceData.filter((item) => item.status === "On Leave").length;
+  const presentOnSelectedDate = attendanceData.filter((item) => item.status === "Present").length;
+  const onLeaveOnSelectedDate = attendanceData.filter((item) => item.status === "On Leave").length;
   const pendingRequests = leaveRequests.filter((req) => req.status === "Pending").length;
 
   const getStatusIcon = (status: string) => {
@@ -379,7 +386,7 @@ const AdminHRMDashboard = () => {
             HRM Dashboard
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Manage employee attendance and leave requests
+            Manage employee attendance and leave requests for {format(selectedDate, "MMMM yyyy")}
           </p>
         </div>
       </div>
@@ -406,9 +413,9 @@ const AdminHRMDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Present Today</p>
+                <p className="text-sm font-medium text-gray-600">Present on {format(selectedDate, "MMM d")}</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {presentToday}
+                  {presentOnSelectedDate}
                 </p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0" />
@@ -421,10 +428,10 @@ const AdminHRMDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  On Leave Today
+                  On Leave on {format(selectedDate, "MMM d")}
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {onLeaveToday}
+                  {onLeaveOnSelectedDate}
                 </p>
               </div>
               <Coffee className="w-8 h-8 text-orange-600 flex-shrink-0" />
@@ -477,6 +484,27 @@ const AdminHRMDashboard = () => {
                 <SelectItem value="management">Management</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-64 justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, "PPP")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
@@ -520,7 +548,7 @@ const AdminHRMDashboard = () => {
                     </TableCell>
                     <TableCell>{item.leaveType || "-"}</TableCell>
                     <TableCell>{item.leavesTakenThisMonth}</TableCell>
-                    <TableCell>{item.user.leaveQuota || 12}</TableCell>
+                    <TableCell>{item.user.leaveQuota || 2}</TableCell>
                     <TableCell>
                       <span className={item.leavesRemaining < 3 ? "text-red-600 font-semibold" : ""}>
                         {item.leavesRemaining}
