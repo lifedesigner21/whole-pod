@@ -143,6 +143,7 @@ const AdminHRMDashboard = () => {
         // Check if user has leave request for today
         const todayLeave = leaveRequests.find((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
+          if (!leave.startDate || !leave.endDate) return false;
           
           const startDate = leave.startDate.toDate ? 
             leave.startDate.toDate() : 
@@ -161,6 +162,7 @@ const AdminHRMDashboard = () => {
         
         const leavesThisMonth = leaveRequests.filter((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
+          if (!leave.startDate) return false;
           
           const leaveDate = leave.startDate.toDate ? 
             leave.startDate.toDate() : 
