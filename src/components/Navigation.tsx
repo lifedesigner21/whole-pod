@@ -124,6 +124,8 @@ const Navigation = () => {
         return "Designer";
       case "developer":
         return "Developer";
+        case "manager":
+        return "Manager";
       default:
         return "User";
     }
