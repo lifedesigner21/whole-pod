@@ -53,6 +53,8 @@ import LeaveRequestList from "@/components/LeaveRequestList";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ManagerDashboard = () => {
+  const { user, userRole, userDepartment } = useAuth();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState(() => {
@@ -72,7 +74,6 @@ const ManagerDashboard = () => {
   const [showAll, setShowAll] = useState(false);
 
   const navigate = useNavigate();
-  const { user, userRole, userDepartment } = useAuth();
 
   useEffect(() => {
     if (!user?.uid) return;
