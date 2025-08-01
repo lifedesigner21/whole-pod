@@ -55,8 +55,8 @@ interface LeaveRequest {
   userId: string;
   leaveType: string;
   status: "Pending" | "Approved" | "Rejected";
-  startDate: any;
-  endDate: any;
+  leaveFrom: any;
+  leaveTo: any;
   requestedBy: string;
 }
 
@@ -210,15 +210,33 @@ const AdminHRMDashboard = () => {
         
         const todayLeave = leaveRequests.find((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
-          if (!leave.startDate || !leave.endDate) return false;
+          if (!leave.leaveFrom || !leave.leaveTo) return false;
           
           try {
-            const startDate = leave.startDate.toDate ? 
-              leave.startDate.toDate() : 
-              new Date(leave.startDate.seconds * 1000);
-            const endDate = leave.endDate.toDate ? 
-              leave.endDate.toDate() : 
-              new Date(leave.endDate.seconds * 1000);
+            // Handle different date formats for leaveFrom and leaveTo
+            let startDate, endDate;
+            
+            if (typeof leave.leaveFrom === 'string') {
+              startDate = new Date(leave.leaveFrom);
+            } else if (leave.leaveFrom.toDate) {
+              startDate = leave.leaveFrom.toDate();
+            } else if (leave.leaveFrom.seconds) {
+              startDate = new Date(leave.leaveFrom.seconds * 1000);
+            } else {
+              console.error("❌ Unable to parse leaveFrom date:", leave.leaveFrom);
+              return false;
+            }
+            
+            if (typeof leave.leaveTo === 'string') {
+              endDate = new Date(leave.leaveTo);
+            } else if (leave.leaveTo.toDate) {
+              endDate = leave.leaveTo.toDate();
+            } else if (leave.leaveTo.seconds) {
+              endDate = new Date(leave.leaveTo.seconds * 1000);
+            } else {
+              console.error("❌ Unable to parse leaveTo date:", leave.leaveTo);
+              return false;
+            }
             
             const today = new Date();
             // Reset time to compare only dates
@@ -243,12 +261,20 @@ const AdminHRMDashboard = () => {
         
         const leavesThisMonth = leaveRequests.filter((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
-          if (!leave.startDate) return false;
+          if (!leave.leaveFrom) return false;
           
           try {
-            const leaveDate = leave.startDate.toDate ? 
-              leave.startDate.toDate() : 
-              new Date(leave.startDate.seconds * 1000);
+            let leaveDate;
+            if (typeof leave.leaveFrom === 'string') {
+              leaveDate = new Date(leave.leaveFrom);
+            } else if (leave.leaveFrom.toDate) {
+              leaveDate = leave.leaveFrom.toDate();
+            } else if (leave.leaveFrom.seconds) {
+              leaveDate = new Date(leave.leaveFrom.seconds * 1000);
+            } else {
+              console.error("❌ Unable to parse leaveFrom date for month calculation:", leave.leaveFrom);
+              return false;
+            }
             
             return leaveDate.getMonth() === currentMonth && 
                    leaveDate.getFullYear() === currentYear;
