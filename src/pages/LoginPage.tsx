@@ -19,6 +19,7 @@ const LoginPage = () => {
   const [userRole, setUserRole] = useState<
     "client" | "designer" | "developer" | "legalteam" | "admin" | "manager" | null
   >(null);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [isVerified, setIsVerified] = useState(false);
@@ -45,6 +46,7 @@ const LoginPage = () => {
       if (!snapshot.empty) {
         const userData = snapshot.docs[0].data();
         setUserRole(userData.role);
+        setUserDepartment(userData.department || null); // 👈 Add this
         setIsVerified(true);
       } else {
         setError("Email not found or not allowed. Please contact admin.");
@@ -77,6 +79,7 @@ const LoginPage = () => {
           name: user.displayName || "",
           email: user.email,
           role: userRole,
+          department: userDepartment || null,
           createdAt: new Date().toISOString(),
         });
       }
@@ -95,6 +98,7 @@ const LoginPage = () => {
     setError("");
     setIsVerified(false);
     setUserRole(null);
+    setUserDepartment(null);
     setShowGoogleLogin(false);
   };
 
