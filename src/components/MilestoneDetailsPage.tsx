@@ -94,8 +94,14 @@ const MilestoneDetailsPage = () => {
       const visibleTasks = tasksSnapshot.docs.filter(
         (doc) => doc.data().isDeleted !== true
       );
-      const totalTasks = visibleTasks.length;
-      const completedTasks = visibleTasks.filter(
+      
+      // Filter out revision tasks for progress calculation
+      const activeTasks = visibleTasks.filter(
+        (doc) => doc.data().isRevision !== true
+      );
+      
+      const totalTasks = activeTasks.length;
+      const completedTasks = activeTasks.filter(
         (doc) => doc.data().status === "Completed"
       ).length;
 
