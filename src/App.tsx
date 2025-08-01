@@ -8,6 +8,7 @@ import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ClientDashboard from "@/pages/ClientDashboard";
 import DepartmentDashboard from "@/pages/DepartmentDashboard";
+import ManagerDashboard from "@/pages/ManagerDashboard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Navigation from "@/components/Navigation";
 import NotFound from "./pages/NotFound";
@@ -79,6 +80,8 @@ const DashboardRouter = () => {
       return <AdminDashboard />;
     case "client":
       return <ClientDashboard />;
+    case "manager":
+      return <ManagerDashboard />;
     case "designer":
     case "developer":
     case "legalteam":
