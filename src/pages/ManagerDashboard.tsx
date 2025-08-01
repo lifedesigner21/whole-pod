@@ -152,7 +152,21 @@ const ManagerDashboard = () => {
         })
       );
       
-      setProjects(projList);
+      // Filter projects by manager's department
+      const departmentFilteredProjects = userDepartment 
+        ? projList.filter(project => {
+            // Map department to service type
+            const departmentMap: { [key: string]: string } = {
+              'design': 'UI/UX',
+              'development': 'Dev', 
+              'legal': 'Legal'
+            };
+            const projectServiceType = project['serviceType'] || project['department'];
+            return projectServiceType === userDepartment || projectServiceType === departmentMap[userDepartment];
+          })
+        : projList;
+      
+      setProjects(departmentFilteredProjects);
     });
 
     return () => unsubscribe();
