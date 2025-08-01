@@ -127,33 +127,70 @@ const AdminHRMDashboard = () => {
   // Calculate attendance data
   useEffect(() => {
     const calculateAttendance = () => {
+      console.log("🔍 Starting attendance calculation for", users.length, "users");
+      console.log("📊 Total tasks:", tasks.length);
+      console.log("📋 Total leave requests:", leaveRequests.length);
+      
       const attendance: EmployeeAttendance[] = users.map((user) => {
+        console.log(`\n👤 Calculating attendance for: ${user.name} (ID: ${user.id})`);
+        
         // Check if user has completed any task today
+        const userTasks = tasks.filter((task) => task.assignedTo === user.id);
+        console.log(`📝 User has ${userTasks.length} total tasks assigned`);
+        
         const todayTasks = tasks.filter((task) => {
           if (task.assignedTo !== user.id) return false;
           if (!task.completedAt) return false;
           
-          const completedDate = task.completedAt.toDate ? 
-            task.completedAt.toDate() : 
-            new Date(task.completedAt.seconds * 1000);
-          
-          return isToday(completedDate);
+          try {
+            const completedDate = task.completedAt.toDate ? 
+              task.completedAt.toDate() : 
+              new Date(task.completedAt.seconds * 1000);
+            
+            const isCompletedToday = isToday(completedDate);
+            if (isCompletedToday) {
+              console.log(`✅ Task completed today: ${task.id} at ${completedDate}`);
+            }
+            return isCompletedToday;
+          } catch (error) {
+            console.error("❌ Error processing task date:", error, task);
+            return false;
+          }
         });
+        
+        console.log(`📅 Tasks completed today: ${todayTasks.length}`);
 
         // Check if user has leave request for today
+        const userLeaves = leaveRequests.filter((leave) => leave.userId === user.id);
+        console.log(`🏖️ User has ${userLeaves.length} total leave requests`);
+        
         const todayLeave = leaveRequests.find((leave) => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
           if (!leave.startDate || !leave.endDate) return false;
           
-          const startDate = leave.startDate.toDate ? 
-            leave.startDate.toDate() : 
-            new Date(leave.startDate.seconds * 1000);
-          const endDate = leave.endDate.toDate ? 
-            leave.endDate.toDate() : 
-            new Date(leave.endDate.seconds * 1000);
-          
-          const today = new Date();
-          return today >= startDate && today <= endDate;
+          try {
+            const startDate = leave.startDate.toDate ? 
+              leave.startDate.toDate() : 
+              new Date(leave.startDate.seconds * 1000);
+            const endDate = leave.endDate.toDate ? 
+              leave.endDate.toDate() : 
+              new Date(leave.endDate.seconds * 1000);
+            
+            const today = new Date();
+            // Reset time to compare only dates
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            
+            const isOnLeaveToday = todayDate >= startDateOnly && todayDate <= endDateOnly;
+            if (isOnLeaveToday) {
+              console.log(`🏖️ On leave today: ${leave.leaveType} from ${startDate} to ${endDate}`);
+            }
+            return isOnLeaveToday;
+          } catch (error) {
+            console.error("❌ Error processing leave date:", error, leave);
+            return false;
+          }
         });
 
         // Calculate leaves taken this month
@@ -164,12 +201,17 @@ const AdminHRMDashboard = () => {
           if (leave.userId !== user.id || leave.status !== "Approved") return false;
           if (!leave.startDate) return false;
           
-          const leaveDate = leave.startDate.toDate ? 
-            leave.startDate.toDate() : 
-            new Date(leave.startDate.seconds * 1000);
-          
-          return leaveDate.getMonth() === currentMonth && 
-                 leaveDate.getFullYear() === currentYear;
+          try {
+            const leaveDate = leave.startDate.toDate ? 
+              leave.startDate.toDate() : 
+              new Date(leave.startDate.seconds * 1000);
+            
+            return leaveDate.getMonth() === currentMonth && 
+                   leaveDate.getFullYear() === currentYear;
+          } catch (error) {
+            console.error("❌ Error processing leave date for month calculation:", error);
+            return false;
+          }
         }).length;
 
         // Determine status
@@ -179,10 +221,13 @@ const AdminHRMDashboard = () => {
         if (todayLeave) {
           status = "On Leave";
           leaveType = todayLeave.leaveType;
+          console.log(`📊 Final status: ON LEAVE (${leaveType})`);
         } else if (todayTasks.length > 0) {
           status = "Present";
+          console.log(`📊 Final status: PRESENT (${todayTasks.length} tasks completed today)`);
         } else {
           status = "Absent";
+          console.log(`📊 Final status: ABSENT (no tasks completed, no approved leave)`);
         }
 
         return {
@@ -193,6 +238,11 @@ const AdminHRMDashboard = () => {
           leavesRemaining: (user.leaveQuota || 12) - leavesThisMonth,
         };
       });
+
+      console.log("\n📈 Attendance Summary:");
+      console.log("Present:", attendance.filter(a => a.status === "Present").length);
+      console.log("On Leave:", attendance.filter(a => a.status === "On Leave").length);
+      console.log("Absent:", attendance.filter(a => a.status === "Absent").length);
 
       setAttendanceData(attendance);
     };
