@@ -55,7 +55,14 @@ import { useAuth } from "@/contexts/AuthContext";
 const ManagerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [serviceTypeFilter, setServiceTypeFilter] = useState("UI/UX");
+  const [serviceTypeFilter, setServiceTypeFilter] = useState(() => {
+    const departmentMap: { [key: string]: string } = {
+      'design': 'UI/UX',
+      'development': 'Dev', 
+      'legal': 'Legal'
+    };
+    return departmentMap[userDepartment || ''] || "UI/UX";
+  });
   const [projects, setProjects] = useState([]);
   const [editingProject, setEditingProject] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -391,19 +398,33 @@ const ManagerDashboard = () => {
         <CardHeader>
           <CardTitle>Department Projects Overview</CardTitle>
           <div className="flex gap-2 border-b">
-            {["UI/UX", "Dev", "Legal"].map((type) => (
-              <button
-                key={type}
-                onClick={() => setServiceTypeFilter(type)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  serviceTypeFilter === type
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+            {(() => {
+              // Filter tabs based on manager's department
+              const allTabs = ["UI/UX", "Dev", "Legal"];
+              const departmentTabMap: { [key: string]: string[] } = {
+                'design': ['UI/UX'],
+                'development': ['Dev'], 
+                'legal': ['Legal']
+              };
+              
+              const availableTabs = userRole === 'admin' 
+                ? allTabs 
+                : (userDepartment && departmentTabMap[userDepartment]) || allTabs;
+              
+              return availableTabs.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setServiceTypeFilter(type)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    serviceTypeFilter === type
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {type}
+                </button>
+              ));
+            })()}
           </div>
         </CardHeader>
         <CardContent>
