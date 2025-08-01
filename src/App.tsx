@@ -23,6 +23,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import TasksPage from "./components/client/TaskPage";
 import InvoiceDashboard from "./components/InvoiceAndPayment";
 import Users from "./components/UsersList";
+import AdminHRMDashboard from "./pages/AdminHRMDashboard";
 import { useWarnOnTabCloseOnly } from "./hooks/useWarnOnTabCloseOnly";
 
 const queryClient = new QueryClient();
@@ -96,7 +97,7 @@ const DashboardRouter = () => {
 };
 
 const AppContent = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
 
   // 👇 This enables tab/window close confirmation
   useWarnOnTabCloseOnly();
@@ -136,6 +137,14 @@ const AppContent = () => {
           <Route path="/client/invoices" element={<InvoicesPage />} />
           <Route path="/payments" element={<InvoiceDashboard />} />
           <Route path="usersList" element={<Users />} />
+          <Route 
+            path="/admin/hrm-dashboard" 
+            element={
+              <ProtectedRoute>
+                {userRole === "admin" ? <AdminHRMDashboard /> : <AccessDenied />}
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </div>
     </BrowserRouter>

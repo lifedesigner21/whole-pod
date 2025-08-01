@@ -7,6 +7,7 @@ import {
   LogOut,
   User,
   Users,
+  UserCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -102,6 +103,7 @@ const Navigation = () => {
   const handleProfileClick = () => navigate("/profile");
   const handlePaymentClick = () => navigate("/payments");
   const handleUsersClick = () => navigate("/usersList");
+  const handleHrmClick = () => navigate("/admin/hrm-dashboard");
 
   const handleSignOut = async () => {
     try {
@@ -248,6 +250,10 @@ const Navigation = () => {
                     <DropdownMenuItem onClick={handleUsersClick}>
                       <Group className="mr-2 h-4 w-4" />
                       <span>Users</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleHrmClick}>
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      <span>HRM</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handlePaymentClick}>
                       <IndianRupeeIcon className="mr-2 h-4 w-4" />
