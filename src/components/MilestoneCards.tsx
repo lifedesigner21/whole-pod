@@ -84,6 +84,8 @@ interface MilestoneCardsProps {
   };
   projectName?: string;
   milestoneDialogRef: MutableRefObject<CreateMilestoneDialogRef | null>; // ✅ Add this line
+  pocId?: string;
+  pocName?: string;
   onMilestoneCreated: () => void;
 }
 
@@ -102,6 +104,8 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
   project,
   projectId,
   projectName,
+  pocId,
+  pocName,
   onMilestoneCreated,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -462,6 +466,8 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         ref={milestoneDialogRef}
         projectId={projectId}
         projectName={projectName || project.name || ""}
+        pocId={pocId}
+        pocName={pocName}
         onMilestoneCreated={() => {
           onMilestoneCreated?.();
           setIsDialogOpen(false);

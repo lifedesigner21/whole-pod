@@ -46,6 +46,8 @@ interface CreateMilestoneDialogProps {
   projectName: string;
   clientName?: string;
   clientId?: string;
+  pocId?: string;
+  pocName?: string;
   onMilestoneCreated: () => void;
 }
 
@@ -57,8 +59,8 @@ const defaultForm = {
   id: "",
   name: "",
   description: "",
-  podDesigner: "",
-  podDesignerId: "",
+  poc: "",
+  pocId: "",
   client: "",
   clientId: "",
   startDate: "",
@@ -72,7 +74,7 @@ const CreateMilestoneDialog = forwardRef<
   CreateMilestoneDialogProps
 >(
   (
-    { projectId, projectName, clientName, clientId, onMilestoneCreated },
+    { projectId, projectName, clientName, clientId, pocId, pocName, onMilestoneCreated },
     ref
   ) => {
     const [open, setOpen] = useState(false);
@@ -99,6 +101,8 @@ const CreateMilestoneDialog = forwardRef<
             ...defaultForm,
             client: clientName || "",
             clientId: clientId || "",
+            poc: pocName || "",
+            pocId: pocId || "",
           });
           setIsEdit(false);
         }
@@ -170,11 +174,11 @@ const CreateMilestoneDialog = forwardRef<
     }, []);
 
     const sendNotification = async () => {
-      const { name, podDesignerId, clientId } = form;
+      const { name, pocId, clientId } = form;
 
       const notifications = [
         {
-          userId: podDesignerId,
+          userId: pocId,
           message: `You have been assigned in a milestone: ${name}. Get ready for the tasks!`,
         },
         {
@@ -209,7 +213,7 @@ const CreateMilestoneDialog = forwardRef<
       const {
         name,
         description,
-        podDesignerId,
+        pocId,
         clientId,
         startDate,
         endDate,
@@ -219,7 +223,7 @@ const CreateMilestoneDialog = forwardRef<
       if (
         !name ||
         !description ||
-        !podDesignerId ||
+        !pocId ||
         !clientId ||
         !startDate ||
         !endDate ||
@@ -241,8 +245,8 @@ const CreateMilestoneDialog = forwardRef<
         const milestoneData = {
           name: name || "",
           description: description || "",
-          podDesigner: form.podDesigner || "",
-          podDesignerId: podDesignerId || "",
+          poc: form.poc || "",
+          pocId: pocId || "",
           client: selectedClient?.name || form.client || "",
           clientId: clientId || "",
           startDate: startDate || "",
@@ -342,22 +346,22 @@ const CreateMilestoneDialog = forwardRef<
             </div>
 
             <div className="space-y-1">
-              <label className="text-sm font-medium">Pod Designer</label>
+              <label className="text-sm font-medium">POC</label>
               <Select
-                value={form.podDesignerId}
+                value={form.pocId}
                 onValueChange={(val) => {
                   const selected = designers.find((d) => d.id === val);
                   if (selected) {
                     setForm({
                       ...form,
-                      podDesignerId: val,
-                      podDesigner: selected.name,
+                      pocId: val,
+                      poc: selected.name,
                     });
                   }
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Pod Designer" />
+                  <SelectValue placeholder="Select POC" />
                 </SelectTrigger>
                 <SelectContent>
                   {designers.map((d) => (

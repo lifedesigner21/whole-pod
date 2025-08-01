@@ -96,6 +96,8 @@ const AdminProjectDetails = () => {
         projectName={project.name}
         clientId={project.clientId}
         clientName={project.clientName}
+        pocId={project.poc?.id}
+        pocName={project.poc?.name}
         onMilestoneCreated={fetchMilestones}
       />
 
@@ -109,6 +111,8 @@ const AdminProjectDetails = () => {
         }}
         projectId={project.id}
         projectName={project.name}
+        pocId={project.poc?.id}
+        pocName={project.poc?.name}
         milestoneDialogRef={milestoneRef}
         onMilestoneCreated={fetchMilestones}
       />
