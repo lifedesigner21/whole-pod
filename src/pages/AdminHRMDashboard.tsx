@@ -140,22 +140,66 @@ const AdminHRMDashboard = () => {
         
         const todayTasks = tasks.filter((task) => {
           if (task.assignedTo !== user.id) return false;
-          if (!task.completedAt) return false;
           
-          try {
-            const completedDate = task.completedAt.toDate ? 
-              task.completedAt.toDate() : 
-              new Date(task.completedAt.seconds * 1000);
-            
-            const isCompletedToday = isToday(completedDate);
-            if (isCompletedToday) {
-              console.log(`✅ Task completed today: ${task.id} at ${completedDate}`);
+          // Check if task is completed
+          if (task.status !== "Completed") return false;
+          
+          console.log(`🔍 Found completed task for ${user.name}:`, {
+            id: task.id,
+            status: task.status,
+            completedAt: task.completedAt,
+            createdAt: task.createdAt
+          });
+          
+          // Case 1: Task has completedAt timestamp
+          if (task.completedAt) {
+            try {
+              const completedDate = task.completedAt.toDate ? 
+                task.completedAt.toDate() : 
+                new Date(task.completedAt.seconds * 1000);
+              
+              const isCompletedToday = isToday(completedDate);
+              if (isCompletedToday) {
+                console.log(`✅ Task completed today (with completedAt): ${task.id} at ${completedDate}`);
+              }
+              return isCompletedToday;
+            } catch (error) {
+              console.error("❌ Error processing completedAt date:", error, task);
+              return false;
             }
-            return isCompletedToday;
-          } catch (error) {
-            console.error("❌ Error processing task date:", error, task);
-            return false;
           }
+          
+          // Case 2: Task is marked as completed but no completedAt timestamp
+          // Check if it was created/updated today (fallback)
+          if (task.createdAt) {
+            try {
+              let dateToCheck;
+              
+              // Handle different date formats
+              if (typeof task.createdAt === 'string') {
+                dateToCheck = new Date(task.createdAt);
+              } else if (task.createdAt.toDate) {
+                dateToCheck = task.createdAt.toDate();
+              } else if (task.createdAt.seconds) {
+                dateToCheck = new Date(task.createdAt.seconds * 1000);
+              } else {
+                console.error("❌ Unable to parse createdAt date:", task.createdAt);
+                return false;
+              }
+              
+              const isCreatedToday = isToday(dateToCheck);
+              if (isCreatedToday) {
+                console.log(`✅ Task completed today (using createdAt as fallback): ${task.id} at ${dateToCheck}`);
+              }
+              return isCreatedToday;
+            } catch (error) {
+              console.error("❌ Error processing createdAt date:", error, task);
+              return false;
+            }
+          }
+          
+          console.log(`⚠️ Completed task has no valid timestamp: ${task.id}`);
+          return false;
         });
         
         console.log(`📅 Tasks completed today: ${todayTasks.length}`);
