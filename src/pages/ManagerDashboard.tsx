@@ -242,6 +242,20 @@ const ManagerDashboard = () => {
   const completedProjects = projects.filter(
     (p) => p.status === "Completed" && p.isDeleted !== true
   ).length;
+  const activeProjects = projects.filter(
+    (p) => p.status === "Active" && p.isDeleted !== true
+  ).length;
+  const onHoldProjects = projects.filter(
+    (p) => p.status === "On Hold" && p.isDeleted !== true
+  ).length;
+  const delayedProjects = projects.filter(
+    (p) => {
+      if (p.isDeleted || !p.endDate) return false;
+      const endDate = new Date(p.endDate);
+      const currentDate = new Date();
+      return currentDate > endDate && p.status !== "Completed";
+    }
+  ).length;
 
   const visibleProjects = showAll
     ? filteredProjects
@@ -298,14 +312,14 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Overview - Removed revenue sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Total Projects
+                  TOTAL PROJECTS
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {totalProjects}
@@ -320,12 +334,12 @@ const ManagerDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-sm font-medium text-gray-600">COMPLETED</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {completedProjects}
                 </p>
               </div>
-              <Clock className="w-8 h-8 text-green-600 flex-shrink-0" />
+              <CheckCircleIcon className="w-8 h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -335,13 +349,27 @@ const ManagerDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Unread Notifications
+                  ACTIVE PROJECTS
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {unreadCount}
+                  {activeProjects}
                 </p>
               </div>
-              <MessageCircle className="w-8 h-8 text-orange-600 flex-shrink-0" />
+              <Users className="w-8 h-8 text-blue-600 flex-shrink-0" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">ON HOLD</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {onHoldProjects}
+                </p>
+              </div>
+              <Clock className="w-8 h-8 text-yellow-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -351,13 +379,13 @@ const ManagerDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Pending Approvals
+                  DELAYED PROJECTS
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {pendingApprovalCount}
+                  {delayedProjects}
                 </p>
               </div>
-              <CheckCircleIcon className="w-8 h-8 text-orange-600 flex-shrink-0" />
+              <Calendar className="w-8 h-8 text-red-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
