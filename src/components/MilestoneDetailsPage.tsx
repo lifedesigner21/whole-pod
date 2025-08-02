@@ -7,6 +7,7 @@ import {
   doc,
   updateDoc,
   onSnapshot,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -43,8 +44,27 @@ const MilestoneDetailsPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [project, setProject] = useState<any>(null);
   const location = useLocation();
   const { milestoneName, projectName } = location.state || {};
+
+  // Fetch project details
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!projectId) return;
+      try {
+        const docRef = doc(db, "projects", projectId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          setProject({ id: snap.id, ...snap.data() });
+        }
+      } catch (err) {
+        console.error("Error fetching project:", err);
+      }
+    };
+
+    fetchProject();
+  }, [projectId]);
 
   useEffect(() => {
     if (!projectId || !milestoneId) return;
@@ -166,6 +186,9 @@ const MilestoneDetailsPage = () => {
         <CreateTaskDialog
           projectId={projectId!}
           milestoneId={milestoneId!}
+          pocId={project?.poc?.id}
+          pocName={project?.poc?.name}
+          projectDepartment={project?.department}
           onTaskCreated={handleTaskCreatedOrUpdated}
         />
       </div>
@@ -201,6 +224,9 @@ const MilestoneDetailsPage = () => {
           projectId={projectId!}
           milestoneId={milestoneId!}
           taskToEdit={taskToEdit}
+          pocId={project?.poc?.id}
+          pocName={project?.poc?.name}
+          projectDepartment={project?.department}
           onTaskUpdated={handleTaskCreatedOrUpdated} // ✅ Close dialog after update
         />
       )}

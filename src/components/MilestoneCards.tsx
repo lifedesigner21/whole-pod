@@ -81,6 +81,9 @@ interface MilestoneCardsProps {
   project: {
     milestones: Milestone[];
     name?: string;
+    client?: string;
+    clientId?: string;
+    department?: string;
   };
   projectName?: string;
   milestoneDialogRef: MutableRefObject<CreateMilestoneDialogRef | null>; // ✅ Add this line
@@ -466,8 +469,11 @@ const MilestoneCards: React.FC<MilestoneCardsProps> = ({
         ref={milestoneDialogRef}
         projectId={projectId}
         projectName={projectName || project.name || ""}
+        clientName={project?.client}
+        clientId={project?.clientId}
         pocId={pocId}
         pocName={pocName}
+        projectDepartment={project?.department}
         onMilestoneCreated={() => {
           onMilestoneCreated?.();
           setIsDialogOpen(false);

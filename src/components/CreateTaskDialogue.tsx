@@ -18,6 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   addDoc,
   collection,
@@ -40,6 +41,9 @@ interface CreateTaskDialogProps {
   taskToEdit?: any; // Pass the task object for editing
   projectName?: string;
   milestoneName?: string;
+  pocId?: string;
+  pocName?: string;
+  projectDepartment?: string;
 }
 
 interface DepartmentUser {
@@ -54,9 +58,13 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
   onTaskCreated,
   onTaskUpdated,
   taskToEdit,
+  pocId,
+  pocName,
+  projectDepartment,
 }) => {
   const { userRole, user } = useAuth();
   const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
+  const [employees, setEmployees] = useState<DepartmentUser[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -66,6 +74,9 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
     priority: "Medium",
     status: "To Do",
     assignedTo: "",
+    poc: pocName || "",
+    pocId: pocId || "",
+    employees: [] as string[],
   });
   const [open, setOpen] = useState(false);
 
@@ -102,13 +113,27 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
           }));
 
         setDepartmentUsers(allUsers);
+
+        // Set employees based on project department
+        let departmentEmployees: DepartmentUser[] = [];
+        if (projectDepartment === "design") {
+          departmentEmployees = allUsers.filter(u => u.role === "designer");
+        } else if (projectDepartment === "development") {
+          departmentEmployees = allUsers.filter(u => u.role === "developer");
+        } else if (projectDepartment === "legal") {
+          departmentEmployees = allUsers.filter(u => u.role === "legalteam");
+        } else {
+          // If no specific department, include all
+          departmentEmployees = allUsers;
+        }
+        setEmployees(departmentEmployees);
       } catch (error) {
         console.error("Error fetching department users:", error);
       }
     };
 
     fetchDepartmentUsers();
-  }, []);
+  }, [projectDepartment]);
 
   // Pre-fill form if editing
   useEffect(() => {
@@ -122,10 +147,13 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
         priority: taskToEdit.priority || "Medium",
         status: taskToEdit.status || "To Do",
         assignedTo: taskToEdit.assignedTo || "",
+        poc: taskToEdit.poc || pocName || "",
+        pocId: taskToEdit.pocId || pocId || "",
+        employees: taskToEdit.employees || [],
       });
       setOpen(true);
     }
-  }, [taskToEdit]);
+  }, [taskToEdit, pocId, pocName]);
 
   const handleSubmit = async () => {
     if (!form.title.trim()) {
@@ -183,6 +211,9 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       status: form.status,
       assignedTo: form.assignedTo,
       assignedToName: assignedUser?.name || "Unknown",
+      poc: form.poc,
+      pocId: form.pocId,
+      employees: form.employees,
       createdBy:user.uid
     };
 
@@ -248,6 +279,9 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
       priority: "Medium",
       status: "To Do",
       assignedTo: "",
+      poc: pocName || "",
+      pocId: pocId || "",
+      employees: [],
     });
   };
 
@@ -310,6 +344,45 @@ const CreateTaskDialog: React.FC<CreateTaskDialogProps> = ({
               setForm({ ...form, estimatedMinutes: e.target.value })
             }
           />
+
+          <label className="text-sm font-medium">POC</label>
+          <Input
+            value={form.poc}
+            placeholder="Point of Contact"
+            disabled
+          />
+
+          <label className="text-sm font-medium">Employees</label>
+          <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
+            {employees.length > 0 ? (
+              employees.map((employee) => (
+                <div key={employee.id} className="flex items-center space-x-2 mb-2">
+                  <Checkbox
+                    id={employee.id}
+                    checked={form.employees.includes(employee.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setForm({
+                          ...form,
+                          employees: [...form.employees, employee.id],
+                        });
+                      } else {
+                        setForm({
+                          ...form,
+                          employees: form.employees.filter((id) => id !== employee.id),
+                        });
+                      }
+                    }}
+                  />
+                  <label htmlFor={employee.id} className="text-sm">
+                    {employee.name} ({employee.role})
+                  </label>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No employees available for this department</p>
+            )}
+          </div>
 
           <label className="text-sm font-medium">Assign To</label>
           <Select

@@ -98,6 +98,7 @@ const AdminProjectDetails = () => {
         clientName={project.clientName}
         pocId={project.poc?.id}
         pocName={project.poc?.name}
+        projectDepartment={project.department}
         onMilestoneCreated={fetchMilestones}
       />
 

@@ -21,6 +21,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   collection,
   getDocs,
@@ -48,6 +49,7 @@ interface CreateMilestoneDialogProps {
   clientId?: string;
   pocId?: string;
   pocName?: string;
+  projectDepartment?: string;
   onMilestoneCreated: () => void;
 }
 
@@ -63,6 +65,7 @@ const defaultForm = {
   pocId: "",
   client: "",
   clientId: "",
+  employees: [] as string[],
   startDate: "",
   endDate: "",
   status: "Pending",
@@ -74,7 +77,7 @@ const CreateMilestoneDialog = forwardRef<
   CreateMilestoneDialogProps
 >(
   (
-    { projectId, projectName, clientName, clientId, pocId, pocName, onMilestoneCreated },
+    { projectId, projectName, clientName, clientId, pocId, pocName, projectDepartment, onMilestoneCreated },
     ref
   ) => {
     const [open, setOpen] = useState(false);
@@ -85,6 +88,7 @@ const CreateMilestoneDialog = forwardRef<
     const [developers, setDevelopers] = useState<UserOption[]>([]);
     const [legalTeam, setLegalTeam] = useState<UserOption[]>([]);
     const [clients, setClients] = useState<UserOption[]>([]);
+    const [employees, setEmployees] = useState<UserOption[]>([]);
     const { user } = useAuth();
 
     useImperativeHandle(ref, () => ({
@@ -93,6 +97,7 @@ const CreateMilestoneDialog = forwardRef<
           setForm({
             ...milestone,
             amount: String(milestone.amount),
+            employees: milestone.employees || [],
             id: milestone.id,
           });
           setIsEdit(true);
@@ -165,13 +170,27 @@ const CreateMilestoneDialog = forwardRef<
           setDevelopers(filteredDevelopers);
           setLegalTeam(filteredLegal);
           setClients(filteredClients);
+
+          // Set employees based on project department
+          let departmentEmployees: UserOption[] = [];
+          if (projectDepartment === "design") {
+            departmentEmployees = filteredDesigners;
+          } else if (projectDepartment === "development") {
+            departmentEmployees = filteredDevelopers;
+          } else if (projectDepartment === "legal") {
+            departmentEmployees = filteredLegal;
+          } else {
+            // If no specific department, include all
+            departmentEmployees = [...filteredDesigners, ...filteredDevelopers, ...filteredLegal];
+          }
+          setEmployees(departmentEmployees);
         } catch (err) {
           console.error("Error fetching users:", err);
         }
       };
 
       fetchUsers();
-    }, []);
+    }, [projectDepartment]);
 
     const sendNotification = async () => {
       const { name, pocId, clientId } = form;
@@ -253,6 +272,7 @@ const CreateMilestoneDialog = forwardRef<
           endDate: endDate || "",
           status: form.status || "Pending",
           amount: Number(amount) || 0,
+          employees: form.employees || [],
           projectId: projectId || "",
           projectName: projectName || "",
           progress: 0,
@@ -399,6 +419,40 @@ const CreateMilestoneDialog = forwardRef<
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-sm font-medium">Employees</label>
+              <div className="border rounded-md p-3 max-h-32 overflow-y-auto">
+                {employees.length > 0 ? (
+                  employees.map((employee) => (
+                    <div key={employee.id} className="flex items-center space-x-2 mb-2">
+                      <Checkbox
+                        id={employee.id}
+                        checked={form.employees.includes(employee.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setForm({
+                              ...form,
+                              employees: [...form.employees, employee.id],
+                            });
+                          } else {
+                            setForm({
+                              ...form,
+                              employees: form.employees.filter((id) => id !== employee.id),
+                            });
+                          }
+                        }}
+                      />
+                      <label htmlFor={employee.id} className="text-sm">
+                        {employee.name}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No employees available for this department</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1">
