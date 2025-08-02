@@ -90,7 +90,9 @@ const AdminHRMDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [attendanceData, setAttendanceData] = useState<EmployeeAttendance[]>([]);
+  const [attendanceData, setAttendanceData] = useState<EmployeeAttendance[]>(
+    []
+  );
 
   // Fetch users
   useEffect(() => {
@@ -134,70 +136,89 @@ const AdminHRMDashboard = () => {
   // Calculate attendance data
   useEffect(() => {
     const calculateAttendance = () => {
-      console.log("🔍 Starting attendance calculation for", users.length, "users");
+      console.log(
+        "🔍 Starting attendance calculation for",
+        users.length,
+        "users"
+      );
       console.log("📊 Total tasks:", tasks.length);
       console.log("📋 Total leave requests:", leaveRequests.length);
       console.log("📅 Selected date:", selectedDate);
-      
+
       const attendance: EmployeeAttendance[] = users.map((user) => {
-        console.log(`\n👤 Calculating attendance for: ${user.name} (ID: ${user.id})`);
-        
+        console.log(
+          `\n👤 Calculating attendance for: ${user.name} (ID: ${user.id})`
+        );
+
         // Check if user has completed any task on selected date
         const userTasks = tasks.filter((task) => task.assignedTo === user.id);
         console.log(`📝 User has ${userTasks.length} total tasks assigned`);
-        
+
         const selectedDateTasks = tasks.filter((task) => {
           if (task.assignedTo !== user.id) return false;
-          
+
           // Check if task is completed
           if (task.status !== "Completed") return false;
-          
+
           console.log(`🔍 Found completed task for ${user.name}:`, {
             id: task.id,
             status: task.status,
             completedAt: task.completedAt,
-            createdAt: task.createdAt
+            createdAt: task.createdAt,
           });
-          
+
           // Case 1: Task has completedAt timestamp
           if (task.completedAt) {
             try {
-              const completedDate = task.completedAt.toDate ? 
-                task.completedAt.toDate() : 
-                new Date(task.completedAt.seconds * 1000);
-              
-              const isSameDate = completedDate.toDateString() === selectedDate.toDateString();
+              const completedDate = task.completedAt.toDate
+                ? task.completedAt.toDate()
+                : new Date(task.completedAt.seconds * 1000);
+
+              const isSameDate =
+                completedDate.toDateString() === selectedDate.toDateString();
               if (isSameDate) {
-                console.log(`✅ Task completed on selected date (with completedAt): ${task.id} at ${completedDate}`);
+                console.log(
+                  `✅ Task completed on selected date (with completedAt): ${task.id} at ${completedDate}`
+                );
               }
               return isSameDate;
             } catch (error) {
-              console.error("❌ Error processing completedAt date:", error, task);
+              console.error(
+                "❌ Error processing completedAt date:",
+                error,
+                task
+              );
               return false;
             }
           }
-          
+
           // Case 2: Task is marked as completed but no completedAt timestamp
           // Check if it was created/updated on selected date (fallback)
           if (task.createdAt) {
             try {
               let dateToCheck;
-              
+
               // Handle different date formats
-              if (typeof task.createdAt === 'string') {
+              if (typeof task.createdAt === "string") {
                 dateToCheck = new Date(task.createdAt);
               } else if (task.createdAt.toDate) {
                 dateToCheck = task.createdAt.toDate();
               } else if (task.createdAt.seconds) {
                 dateToCheck = new Date(task.createdAt.seconds * 1000);
               } else {
-                console.error("❌ Unable to parse createdAt date:", task.createdAt);
+                console.error(
+                  "❌ Unable to parse createdAt date:",
+                  task.createdAt
+                );
                 return false;
               }
-              
-              const isSameDate = dateToCheck.toDateString() === selectedDate.toDateString();
+
+              const isSameDate =
+                dateToCheck.toDateString() === selectedDate.toDateString();
               if (isSameDate) {
-                console.log(`✅ Task completed on selected date (using createdAt as fallback): ${task.id} at ${dateToCheck}`);
+                console.log(
+                  `✅ Task completed on selected date (using createdAt as fallback): ${task.id} at ${dateToCheck}`
+                );
               }
               return isSameDate;
             } catch (error) {
@@ -205,37 +226,45 @@ const AdminHRMDashboard = () => {
               return false;
             }
           }
-          
+
           console.log(`⚠️ Completed task has no valid timestamp: ${task.id}`);
           return false;
         });
-        
-        console.log(`📅 Tasks completed on selected date: ${selectedDateTasks.length}`);
+
+        console.log(
+          `📅 Tasks completed on selected date: ${selectedDateTasks.length}`
+        );
 
         // Check if user has leave request for selected date
-        const userLeaves = leaveRequests.filter((leave) => leave.userId === user.id);
+        const userLeaves = leaveRequests.filter(
+          (leave) => leave.userId === user.id
+        );
         console.log(`🏖️ User has ${userLeaves.length} total leave requests`);
-        
+
         const selectedDateLeave = leaveRequests.find((leave) => {
-          if (leave.userId !== user.id || leave.status !== "Approved") return false;
+          if (leave.userId !== user.id || leave.status !== "Approved")
+            return false;
           if (!leave.leaveFrom || !leave.leaveTo) return false;
-          
+
           try {
             // Handle different date formats for leaveFrom and leaveTo
             let startDate, endDate;
-            
-            if (typeof leave.leaveFrom === 'string') {
+
+            if (typeof leave.leaveFrom === "string") {
               startDate = new Date(leave.leaveFrom);
             } else if (leave.leaveFrom.toDate) {
               startDate = leave.leaveFrom.toDate();
             } else if (leave.leaveFrom.seconds) {
               startDate = new Date(leave.leaveFrom.seconds * 1000);
             } else {
-              console.error("❌ Unable to parse leaveFrom date:", leave.leaveFrom);
+              console.error(
+                "❌ Unable to parse leaveFrom date:",
+                leave.leaveFrom
+              );
               return false;
             }
-            
-            if (typeof leave.leaveTo === 'string') {
+
+            if (typeof leave.leaveTo === "string") {
               endDate = new Date(leave.leaveTo);
             } else if (leave.leaveTo.toDate) {
               endDate = leave.leaveTo.toDate();
@@ -245,15 +274,31 @@ const AdminHRMDashboard = () => {
               console.error("❌ Unable to parse leaveTo date:", leave.leaveTo);
               return false;
             }
-            
+
             // Reset time to compare only dates
-            const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-            const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-            
-            const isOnLeaveOnSelectedDate = selectedDateOnly >= startDateOnly && selectedDateOnly <= endDateOnly;
+            const selectedDateOnly = new Date(
+              selectedDate.getFullYear(),
+              selectedDate.getMonth(),
+              selectedDate.getDate()
+            );
+            const startDateOnly = new Date(
+              startDate.getFullYear(),
+              startDate.getMonth(),
+              startDate.getDate()
+            );
+            const endDateOnly = new Date(
+              endDate.getFullYear(),
+              endDate.getMonth(),
+              endDate.getDate()
+            );
+
+            const isOnLeaveOnSelectedDate =
+              selectedDateOnly >= startDateOnly &&
+              selectedDateOnly <= endDateOnly;
             if (isOnLeaveOnSelectedDate) {
-              console.log(`🏖️ On leave on selected date: ${leave.leaveType} from ${startDate} to ${endDate}`);
+              console.log(
+                `🏖️ On leave on selected date: ${leave.leaveType} from ${startDate} to ${endDate}`
+              );
             }
             return isOnLeaveOnSelectedDate;
           } catch (error) {
@@ -265,28 +310,37 @@ const AdminHRMDashboard = () => {
         // Calculate leaves taken in selected month
         const selectedMonth = selectedDate.getMonth();
         const selectedYear = selectedDate.getFullYear();
-        
+
         const leavesThisMonth = leaveRequests.filter((leave) => {
-          if (leave.userId !== user.id || leave.status !== "Approved") return false;
+          if (leave.userId !== user.id || leave.status !== "Approved")
+            return false;
           if (!leave.leaveFrom) return false;
-          
+
           try {
             let leaveDate;
-            if (typeof leave.leaveFrom === 'string') {
+            if (typeof leave.leaveFrom === "string") {
               leaveDate = new Date(leave.leaveFrom);
             } else if (leave.leaveFrom.toDate) {
               leaveDate = leave.leaveFrom.toDate();
             } else if (leave.leaveFrom.seconds) {
               leaveDate = new Date(leave.leaveFrom.seconds * 1000);
             } else {
-              console.error("❌ Unable to parse leaveFrom date for month calculation:", leave.leaveFrom);
+              console.error(
+                "❌ Unable to parse leaveFrom date for month calculation:",
+                leave.leaveFrom
+              );
               return false;
             }
-            
-            return leaveDate.getMonth() === selectedMonth && 
-                   leaveDate.getFullYear() === selectedYear;
+
+            return (
+              leaveDate.getMonth() === selectedMonth &&
+              leaveDate.getFullYear() === selectedYear
+            );
           } catch (error) {
-            console.error("❌ Error processing leave date for month calculation:", error);
+            console.error(
+              "❌ Error processing leave date for month calculation:",
+              error
+            );
             return false;
           }
         }).length;
@@ -301,10 +355,14 @@ const AdminHRMDashboard = () => {
           console.log(`📊 Final status: ON LEAVE (${leaveType})`);
         } else if (selectedDateTasks.length > 0) {
           status = "Present";
-          console.log(`📊 Final status: PRESENT (${selectedDateTasks.length} tasks completed on selected date)`);
+          console.log(
+            `📊 Final status: PRESENT (${selectedDateTasks.length} tasks completed on selected date)`
+          );
         } else {
           status = "Absent";
-          console.log(`📊 Final status: ABSENT (no tasks completed, no approved leave)`);
+          console.log(
+            `📊 Final status: ABSENT (no tasks completed, no approved leave)`
+          );
         }
 
         return {
@@ -317,9 +375,18 @@ const AdminHRMDashboard = () => {
       });
 
       console.log("\n📈 Attendance Summary:");
-      console.log("Present:", attendance.filter(a => a.status === "Present").length);
-      console.log("On Leave:", attendance.filter(a => a.status === "On Leave").length);
-      console.log("Absent:", attendance.filter(a => a.status === "Absent").length);
+      console.log(
+        "Present:",
+        attendance.filter((a) => a.status === "Present").length
+      );
+      console.log(
+        "On Leave:",
+        attendance.filter((a) => a.status === "On Leave").length
+      );
+      console.log(
+        "Absent:",
+        attendance.filter((a) => a.status === "Absent").length
+      );
 
       setAttendanceData(attendance);
     };
@@ -331,22 +398,28 @@ const AdminHRMDashboard = () => {
 
   // Filter attendance data
   const filteredAttendance = attendanceData.filter((item) => {
-    const matchesSearch = 
+    const matchesSearch =
       item.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.user.role.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDepartment = 
+
+    const matchesDepartment =
       departmentFilter === "all" || item.user.department === departmentFilter;
-    
+
     return matchesSearch && matchesDepartment;
   });
 
   // Calculate stats for selected date
   const totalEmployees = users.length;
-  const presentOnSelectedDate = attendanceData.filter((item) => item.status === "Present").length;
-  const onLeaveOnSelectedDate = attendanceData.filter((item) => item.status === "On Leave").length;
-  const pendingRequests = leaveRequests.filter((req) => req.status === "Pending").length;
+  const presentOnSelectedDate = attendanceData.filter(
+    (item) => item.status === "Present"
+  ).length;
+  const onLeaveOnSelectedDate = attendanceData.filter(
+    (item) => item.status === "On Leave"
+  ).length;
+  const pendingRequests = leaveRequests.filter(
+    (req) => req.status === "Pending"
+  ).length;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -366,7 +439,9 @@ const AdminHRMDashboard = () => {
       case "Present":
         return <Badge className="bg-green-100 text-green-800">Present</Badge>;
       case "On Leave":
-        return <Badge className="bg-orange-100 text-orange-800">On Leave</Badge>;
+        return (
+          <Badge className="bg-orange-100 text-orange-800">On Leave</Badge>
+        );
       case "Absent":
         return <Badge className="bg-red-100 text-red-800">Absent</Badge>;
       default:
@@ -386,7 +461,8 @@ const AdminHRMDashboard = () => {
             HRM Dashboard
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Manage employee attendance and leave requests for {format(selectedDate, "MMMM yyyy")}
+            Manage employee attendance and leave requests for{" "}
+            {format(selectedDate, "MMMM yyyy")}
           </p>
         </div>
       </div>
@@ -413,7 +489,9 @@ const AdminHRMDashboard = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Present on {format(selectedDate, "MMM d")}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Present on {format(selectedDate, "MMM d")}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {presentOnSelectedDate}
                 </p>
@@ -471,7 +549,10 @@ const AdminHRMDashboard = () => {
                 />
               </div>
             </div>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <Select
+              value={departmentFilter}
+              onValueChange={setDepartmentFilter}
+            >
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Filter by department" />
@@ -535,22 +616,34 @@ const AdminHRMDashboard = () => {
                     <TableCell className="font-medium">
                       <div>
                         <p className="font-semibold">{item.user.name}</p>
-                        <p className="text-sm text-gray-600">{item.user.email}</p>
+                        <p className="text-sm text-gray-600">
+                          {item.user.email}
+                        </p>
                       </div>
                     </TableCell>
-                    <TableCell>{item.user.role}</TableCell>
-                    <TableCell>{item.user.department || "N/A"}</TableCell>
+                    <TableCell>{item.user.role?.toUpperCase()}</TableCell>
+                    <TableCell>
+                      {item.user.department?.toUpperCase() || "N/A"}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(item.status)}
                         {getStatusBadge(item.status)}
                       </div>
                     </TableCell>
-                    <TableCell>{item.leaveType || "-"}</TableCell>
+                    <TableCell>
+                      {item.leaveType?.toLocaleUpperCase() || "-"}
+                    </TableCell>
                     <TableCell>{item.leavesTakenThisMonth}</TableCell>
                     <TableCell>{item.user.leaveQuota || 2}</TableCell>
                     <TableCell>
-                      <span className={item.leavesRemaining < 3 ? "text-red-600 font-semibold" : ""}>
+                      <span
+                        className={
+                          item.leavesRemaining < 3
+                            ? "text-red-600 font-semibold"
+                            : ""
+                        }
+                      >
                         {item.leavesRemaining}
                       </span>
                     </TableCell>
