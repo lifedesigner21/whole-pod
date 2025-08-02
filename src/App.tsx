@@ -24,6 +24,7 @@ import TasksPage from "./components/client/TaskPage";
 import InvoiceDashboard from "./components/InvoiceAndPayment";
 import Users from "./components/UsersList";
 import AdminHRMDashboard from "./pages/AdminHRMDashboard";
+import CreditTracker from "./pages/CreditTracker";
 import { useWarnOnTabCloseOnly } from "./hooks/useWarnOnTabCloseOnly";
 
 const queryClient = new QueryClient();
@@ -142,6 +143,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 {userRole === "admin" ? <AdminHRMDashboard /> : <AccessDenied />}
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/credit-tracker" 
+            element={
+              <ProtectedRoute>
+                <CreditTracker />
               </ProtectedRoute>
             } 
           />

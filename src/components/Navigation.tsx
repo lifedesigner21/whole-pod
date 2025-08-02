@@ -8,6 +8,7 @@ import {
   User,
   Users,
   UserCheck,
+  CreditCard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -104,6 +105,7 @@ const Navigation = () => {
   const handlePaymentClick = () => navigate("/payments");
   const handleUsersClick = () => navigate("/usersList");
   const handleHrmClick = () => navigate("/admin/hrm-dashboard");
+  const handleCreditTrackerClick = () => navigate("/credit-tracker");
 
   const handleSignOut = async () => {
     try {
@@ -267,6 +269,10 @@ const Navigation = () => {
                   open={isDialogOpen}
                   onClose={() => setIsDialogOpen(false)}
                 />
+                <DropdownMenuItem onClick={handleCreditTrackerClick}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <span>Credit Tracker</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
