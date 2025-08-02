@@ -9,6 +9,7 @@ import {
   Users,
   UserCheck,
   CreditCard,
+  HomeIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import { signOut } from "firebase/auth";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import AddUserDialog from "./AddUserDialogue";
+import { useLocation } from "react-router-dom";
 
 interface NotificationItem {
   id: string;
@@ -44,6 +46,7 @@ const Navigation = () => {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const location = useLocation();
 
   // 🔔 Fetch notifications
   useEffect(() => {
@@ -76,6 +79,10 @@ const Navigation = () => {
   }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNavigate = () => {
+    navigate("/dashboard");
+  };
 
   const handleMarkAsRead = async (id: string) => {
     const ref = doc(db, `users/${user.uid}/notifications/${id}`);
@@ -126,7 +133,7 @@ const Navigation = () => {
         return "Designer";
       case "developer":
         return "Developer";
-        case "manager":
+      case "manager":
         return "Manager";
       default:
         return "User";
@@ -209,6 +216,16 @@ const Navigation = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {location.pathname !== "/dashboard" && (
+              <Button
+                variant="ghost"
+                className="relative"
+                onClick={handleNavigate}
+              >
+                <HomeIcon className="w-4 h-4 cursor-pointer" />
+              </Button>
+            )}
 
             {/* Avatar/Profile */}
             <DropdownMenu>
